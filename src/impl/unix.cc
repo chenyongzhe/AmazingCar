@@ -19,6 +19,7 @@
 #include <sys/param.h>
 #include <pthread.h>
 
+
 #if defined(__linux__)
 # include <linux/serial.h>
 #endif
@@ -147,6 +148,9 @@ Serial::SerialImpl::open ()
     case ENFILE:
     case EMFILE:
       THROW (IOException, "Too many file handles open.");
+
+
+
     default:
       THROW (IOException, errno);
     }

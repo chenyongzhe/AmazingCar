@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>serial</name>
+  <name>amazing_car</name>
   <version>1.2.1</version>
   <description>
     Serial is a cross-platform, simple to use library for using serial ports on computers.  This library provides a C++, object oriented interface for interacting with RS-232 like devices on Linux and Windows.
@@ -16,6 +16,19 @@
 
   <author email="wjwwood@gmail.com">William Woodall</author>
   <author email="ash.gti@gmail.com">John Harrison</author>
+  
+  <build_depend>message_generation</build_depend>
+  <!-- Use buildtool_depend for build tool packages: -->
+  <!--   <buildtool_depend>catkin</buildtool_depend> -->
+  <!-- Use run_depend for packages you need at runtime: -->
+  <run_depend>message_runtime</run_depend>
+  <!-- Use test_depend for packages you need only for testing: -->
+  <!--   <test_depend>gtest</test_depend> -->
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>rospy</run_depend>
 
   <buildtool_depend>catkin</buildtool_depend>
 

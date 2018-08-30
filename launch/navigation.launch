@@ -1,0 +1,7 @@
+<launch>
+  <master auto="start"/>
+  <node name="my_car_location_publisher" pkg="amazing_car" type="my_car_location_publisher" />
+  <node name="algorithm" pkg="amazing_car" type="algorithm" />
+  <node name="my_car_controller" pkg="amazing_car" type="my_car_controller" /> 
+  <node name="my_tar_location_publisher" pkg="amazing_car" type="my_tar_location_publisher" />
+</launch>

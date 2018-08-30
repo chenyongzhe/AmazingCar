@@ -1,0 +1,251 @@
+#include "ros/ros.h"
+#include "amazing_car/my_location_msg.h"
+#include "amazing_car/my_angle_msg.h"
+#include "stdio.h"
+#include "math.h"
+
+// OS Specific sleep
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+#include "serial/serial.h"
+
+//#define TO_RADIAN(x) ((x*M_PI)/180)
+
+
+using std::string;
+
+typedef struct{
+    //jingdu
+    double lon;
+    std::string lon_dir;  // E  or  W
+    //weidu
+    double lat;
+    std::string lat_dir;  // S  or  N
+}GPGGA_Data;
+
+typedef struct{
+    //distance
+    double dis;
+    //x_distance
+    double x_dis;   //  East
+    //y_distance
+    double y_dis;   //  North
+}GPNTR_Data;
+
+typedef struct{
+    //yaw
+    double yaw;
+    //roll
+    double roll;
+    //pitch
+    double pitch;
+}GPTRA_Data;
+
+
+struct Vec2d{
+    double x;
+    double y;
+};
+
+struct DMS{
+    DMS(double dm){
+        dd = (int)dm / 100;
+        mm = (int)dm - 100 * dd;
+        ss = (dm - 100 * dd - mm) * 60.0f;
+    }
+    int dd;
+    int mm;
+    double ss;
+};
+
+GPGGA_Data decodeGPGGA(std::string gpgga_msg);
+GPNTR_Data decodeGPNTR(std::string gpntr_msg);
+GPTRA_Data decodeGPTRA(std::string gptra_msg);
+double DeltaLat(const DMS & base, const DMS & dest);
+double DeltaLon(const DMS & base, const DMS & dest);
+Vec2d get_distance1(double latDest, double lngDest, double latOrg, double lngOrg);
+
+
+//X+ calibration data
+float zero_angle = 0;
+GPGGA_Data ori_data = {0, 0};
+
+
+float diff_angle = 180;
+
+
+serial::Serial my_serial("/dev/ttyUSB1", 115200, serial::Timeout::simpleTimeout(1000));
+
+int main(int argc, char ** argv){
+	ros::init(argc, argv, "gprs_location_publisher");
+	ros::NodeHandle n;
+	string location_str;
+	ros::Publisher location_pub = n.advertise<amazing_car::my_location_msg>("my_car_location", 1000);
+	ros::Publisher angle_pub = n.advertise<amazing_car::my_angle_msg>("my_car_angle", 1000);
+	ros::Rate rate(80);
+	while(ros::ok()){
+		location_str.clear();
+		amazing_car::my_location_msg location_msg;
+		amazing_car::my_angle_msg angle_msg;
+		try{
+		    //get data
+		    usleep(5000);
+		    std::string data;
+	            my_serial.readline(data);
+	            //printf("%s", data.c_str());
+		    //decode data and update data
+		    GPGGA_Data gpgga_data;
+		    GPNTR_Data gpntr_data;
+		    GPTRA_Data gptra_data;
+		    if(data.c_str() == NULL || strlen(data.c_str()) < 10){
+		    //if(strlen(data.c_str()) < 10){
+		        continue;
+		    }
+		    if(data.c_str()[3] == 'N'){
+		        gpntr_data = decodeGPNTR(data);
+		    }else if(data.c_str()[3] == 'G'){
+		        gpgga_data = decodeGPGGA(data);
+			//translate gpgga to cordinate
+			//---------------------------
+			Vec2d location = get_distance1(gpgga_data.lat,gpgga_data.lon,ori_data.lat,ori_data.lon);		
+			double ori_x_data = location.y;
+			double ori_y_data = -location.x;
+
+			float alpha = zero_angle - diff_angle < 0 ? zero_angle - diff_angle + 360 : zero_angle - diff_angle;
+			float beta = gptra_data.yaw - diff_angle < 0 ? gptra_data.yaw - diff_angle + 360 : gptra_data.yaw - diff_angle;
+
+			location_msg.x = sqrt(location.y * location.y + location.x * location.x) * cos(TO_RADIAN(alpha + 360 - beta));
+			location_msg.y = sqrt(location.y * location.y + location.x * location.x) * sin(TO_RADIAN(alpha + 360 - beta));
+			
+			printf("%f %f\n", location_msg.x, location_msg.y);
+			//---------------------------
+			location_pub.publish(location_msg);
+		    }else if(data.c_str()[3] == 'T'){
+		        gptra_data = decodeGPTRA(data);
+			float alpha = zero_angle - diff_angle < 0 ? zero_angle - diff_angle + 360 : zero_angle - diff_angle;
+			float beta = gptra_data.yaw - diff_angle < 0 ? gptra_data.yaw - diff_angle + 360 : gptra_data.yaw - diff_angle;
+
+			angle_msg.yaw = beta - alpha;
+			angle_pub.publish(angle_msg);
+		    }
+		}catch(...){
+		    //continue;
+		}
+		
+		ros::spinOnce();
+		rate.sleep();
+	}
+	return 0;
+}
+
+void split(std::string& s, std::string& delim, std::vector<std::string>* ret){
+	size_t last = 0;
+	size_t index = s.find_first_of(delim, last);
+	while (index != std::string::npos){
+		ret->push_back(s.substr(last, index - last));
+		last = index + 1;
+		index = s.find_first_of(delim, last);
+	}
+	if (index - last>0){
+		ret->push_back(s.substr(last, index - last));
+	}
+}
+
+GPGGA_Data decodeGPGGA(std::string gpgga_msg){
+    GPGGA_Data data;
+    std::vector<std::string> vec;
+    vec.clear();
+    std::string delim = ",";
+    split(gpgga_msg, delim, &vec);
+    if(vec.size() < 6){
+        data.lat = 0;
+        data.lon = 0;
+    } else if(strcmp(vec[0].c_str(),"$GPGGA") == 0){
+        data.lat = atof(vec[2].c_str());
+        data.lat_dir = vec[3].c_str();
+        data.lon = atof(vec[4].c_str());
+        data.lon_dir = vec[5].c_str();
+    }else{
+
+    }
+    return data;
+}
+
+GPTRA_Data decodeGPTRA(std::string gptra_msg){
+    GPTRA_Data data;
+    std::vector<std::string> vec;
+    vec.clear();
+    std::string delim = ",";
+    split(gptra_msg, delim, &vec);
+    if(vec.size() < 3){
+        data.yaw = 0;
+    } else if(strcmp(vec[0].c_str(),"$GPTRA") == 0){
+        data.yaw = atof(vec[2].c_str());
+    }else{
+
+    }
+    return data;
+}
+
+GPNTR_Data decodeGPNTR(std::string gpntr_msg){
+    GPNTR_Data data;
+    std::vector<std::string> vec;
+    vec.clear();
+    std::string delim = ",";
+    split(gpntr_msg, delim, &vec);
+    if(vec.size() < 6){
+        data.dis = 0;
+        data.x_dis = 0;
+        data.y_dis = 0;
+    } else if(strcmp(vec[0].c_str(),"$GPNTR") == 0){
+        data.dis = atof(vec[3].c_str());
+        if(vec[4].c_str()[0] == '+'){
+            data.x_dis = atof(vec[4].substr(1).c_str());
+        }else{
+            data.x_dis = atof(vec[4].c_str());
+        }
+        if(vec[5].c_str()[0] == '+'){
+            data.y_dis = atof(vec[5].substr(1).c_str());
+        }else{
+            data.y_dis = atof(vec[5].c_str());
+        }
+    }else{
+
+    }
+    return data;
+}
+
+double DeltaLat(const DMS & base, const DMS & dest)
+{
+    double distance = (dest.dd - base.dd) * 111000.0f;
+    distance += (dest.mm - base.mm) * 1850.0f;
+    distance += (dest.ss - base.ss) * 30.9f;
+    return distance;
+}
+
+double DeltaLon(const DMS & base, const DMS & dest)
+{
+    double distance = (dest.dd - base.dd) * 85390.0f;
+    distance += (dest.mm - base.mm) * 1420.0f;
+    distance += (dest.ss - base.ss) * 23.6f;
+    return distance;
+}
+
+Vec2d get_distance1(double latDest, double lngDest, double latOrg, double lngOrg)
+{
+    Vec2d vec;
+    DMS latDestDms(latDest);
+    DMS lngDestDms(lngDest);
+    DMS latOrgDms(latOrg);
+    DMS lngOrgDms(lngOrg);
+
+    vec.x = DeltaLon(lngOrgDms, lngDestDms);
+    vec.y = DeltaLat(latOrgDms, latDestDms);
+    return vec;
+}
+
+

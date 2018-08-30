@@ -136,10 +136,8 @@ int run(int argc, char **argv)
     cout << "Iteration: " << count << ", Bytes written: ";
     cout << bytes_wrote << ", Bytes read: ";
     cout << result.length() << ", String read: " << result << endl;
-
     count += 1;
   }
-
   // Test the timeout at 250ms, but asking exactly for what was written
   count = 0;
   cout << "Timeout == 250ms, asking for exactly what was written." << endl;
@@ -151,7 +149,6 @@ int run(int argc, char **argv)
     cout << "Iteration: " << count << ", Bytes written: ";
     cout << bytes_wrote << ", Bytes read: ";
     cout << result.length() << ", String read: " << result << endl;
-
     count += 1;
   }
 
