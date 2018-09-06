@@ -12,6 +12,7 @@
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_lidar_distance.h"
 #include "geometry_msgs/Twist.h"
+#include "pidClass.h"
 #include "stdio.h"
 #include "sensor_msgs/LaserScan.h"
 #include "sensor_msgs/PointCloud2.h"
