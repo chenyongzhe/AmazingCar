@@ -96,7 +96,7 @@ Vec2d get_distance1(double latDest, double lngDest, double latOrg, double lngOrg
 
 GPGGA_Data ori_data;
 
-serial::Serial my_serial("/dev/ttyUSB0", 115200, serial::Timeout::simpleTimeout(1000));
+serial::Serial my_serial("/dev/ttyUSB1", 115200, serial::Timeout::simpleTimeout(1000));
 
 int main(int argc, char ** argv){
 	//ori_data.lat = 4349.15060000;

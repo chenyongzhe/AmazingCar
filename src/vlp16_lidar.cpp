@@ -42,8 +42,8 @@ pcap_t * get_pcap_dev_handle(int ethernet_number) {
 		return nullptr;
 	}
 	printf("Enter the interface number (1-%d):", i);
-	//scanf("%d", &inum);
-	inum = ethernet_number;
+	scanf("%d", &inum);
+	//inum = ethernet_number;
 	if (inum < 1 || inum > i) {
 		printf("\nIntrface number out of range.\n");
 		/* Free the device list */
@@ -293,7 +293,7 @@ std::vector<std::vector<float>> get_current_frame_vld16( pcap_t * cur_device, pc
 						maxFlectivity = flectivity[channel_count*i + j];
 					}
 
-					distance = distance_mm[i*channel_count + j] / 1000.0f;
+					distance = distance_mm[i*channel_count + j] * 2/ 1000.0f;
 					if (distance > maxDistance)
 						maxDistance = distance;
 					int flectivity_value = flectivity[i*channel_count + j];
@@ -301,14 +301,14 @@ std::vector<std::vector<float>> get_current_frame_vld16( pcap_t * cur_device, pc
 					float vertical_angle = vld16_vertical_angles[j % 16] * PI / 180;
 
 					Point pclPoint;
-					pclPoint.z = distance * sin(vertical_angle) * 2;
-					pclPoint.y = distance * cos(vertical_angle) * cos(horizontal_angle) * 2;
-					pclPoint.x = distance * cos(vertical_angle) * sin(horizontal_angle) * 2;
+					pclPoint.z = distance * sin(vertical_angle);
+					pclPoint.y = distance * cos(vertical_angle) * cos(horizontal_angle);
+					pclPoint.x = distance * cos(vertical_angle) * sin(horizontal_angle);
 					pclPoint.r = 0;
 					pclPoint.b = 255;
 					pclPoint.g = 0;
 					//######################################################################################################################################
-					if (pclPoint.y >= 0.0f&&pclPoint.y <= 5.0f&&distance > 0.0f && pclPoint.x >= -5.0f&&pclPoint.x <= 5.0f&&pclPoint.z >= -0.33f) {
+					if (pclPoint.y >= 0.0f&&pclPoint.y <= 5.0f&&distance > 0.0f && pclPoint.x >= -5.0f&&pclPoint.x <= 5.0f&&pclPoint.z >= -0.7f) {
 
 						int grid_cur_row = (pclPoint.y * 100 - grid_bottom) / 5;
 						int grid_cur_col = (pclPoint.x * 100 - grid_left) / 5;
@@ -405,7 +405,7 @@ std::vector<std::vector<float>> get_current_frame_vld16( pcap_t * cur_device, pc
 							point_view.r = r;
 							point_view.g = g;
 							point_view.b = b;
-							scene->push_back(point_view);
+						//	scene->push_back(point_view);
 						}
 					}
 				}
@@ -445,7 +445,11 @@ int main(int argc, char ** argv) {
 		float angle = -360;
 		for(int i=0;i<datas.size();++i){
 		   	printf("no.%d  distance:%f, hori_angle:%f, vert_angle:%f\n",i,datas[i][0],datas[i][1],datas[i][2]);
-		   	if(datas[i][0] < distance){
+		   	
+			if(datas[i][1] <= -30 || datas[i][1]>=30){
+				continue;
+			}
+			if(datas[i][0] < distance){
 				distance = datas[i][0];
 				angle = datas[i][1];
 			}

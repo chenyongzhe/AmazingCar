@@ -100,6 +100,12 @@ void scanCallbackVLP16(const sensor_msgs::PointCloud2 cloud){
 	}else{
 		stop_flag = false;
 	}
+
+	if(stop_flag){
+		printf("can't move\n");
+	}else{
+		printf("can move\n");
+	}
 	//printf("count: %d\n", min_count);
 	//printf("flag: %d\n", stop_flag);
 
@@ -129,7 +135,7 @@ void scanCallbackVlp16New(const amazing_car::my_lidar_distance lidar_distance){
 	if(lidar_distance.angle == -360){
 		stop_flag = false;
 	}else{
-		if(lidar_distance.min_distance < 2){
+		if(lidar_distance.min_distance < 2 && lidar_distance.angle >= -30 && lidar_distance.angle <= 30){
 			stop_flag = true;
 		}else{
 			stop_flag = false;
@@ -137,9 +143,9 @@ void scanCallbackVlp16New(const amazing_car::my_lidar_distance lidar_distance){
 	}
 
 	if(stop_flag){
-		printf("can moving!\n");
-	}else{
 		printf("can't moving!\n");
+	}else{
+		printf("can moving!\n");
 	}
 
 }
@@ -189,8 +195,8 @@ int main(int argc, char ** argv){
 	ros::Subscriber car_angle_sub = n.subscribe("my_car_angle", 1000, callback_angle);
 	ros::Subscriber car_front_location_sub = n.subscribe("my_car_location", 1000, callback_front_location);
 	//ros::Subscriber sub1 = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallbackRPLIDARA2);
-	//ros::Subscriber sub2 = n.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1000, scanCallbackVLP16);
-	ros::Subscriber sub3 = n.subscribe<amazing_car::my_lidar_distance>("/my_lidar_distance", 1000, scanCallbackVlp16New);
+	ros::Subscriber sub2 = n.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1000, scanCallbackVLP16);
+	//ros::Subscriber sub3 = n.subscribe<amazing_car::my_lidar_distance>("/vlp16_lidar", 1000, scanCallbackVlp16New);
 
 	ros::Subscriber tar_location_sub = n.subscribe("my_tar_location", 1000, callback_tar_location);
 	ros::Publisher cmd_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 1000);

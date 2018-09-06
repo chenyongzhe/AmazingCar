@@ -16,7 +16,7 @@
 
 using namespace std;
 
-serial::Serial my_serial("/dev/ttyUSB1", 57600, serial::Timeout::simpleTimeout(1000));
+serial::Serial my_serial("/dev/ttyUSB0", 57600, serial::Timeout::simpleTimeout(1000));
 
 int direction = 50;
 int speed = 50;
@@ -25,14 +25,14 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 	float left = cmd_vel.linear.x;
 	float right = cmd_vel.linear.y;
 	if(left == 50 && right == 350){
-		direction = 43;
+		direction = 41;
 		speed = 50;
 	}else if(left == 350 && right == 50){
-		direction = 57;
+		direction = 59;
 		speed = 50;
 	}else if(left == 350 && right == 350){
 		direction = 48;
-		speed = 35;
+		speed = 32;
 	}else{  
 		direction = 50;
 		speed = 50;

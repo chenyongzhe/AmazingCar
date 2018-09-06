@@ -93,7 +93,7 @@ void callback_state(const amazing_car::my_gps_state msg){
 int main(int argc, char ** argv){
 	ros::init(argc, argv, "ui_transdata");
 	ros::NodeHandle n;
-	Connect("192.168.188.41");
+	Connect("192.168.188.53");
 	//Connect("192.168.0.124");
 	//Connect("169.254.1.145");
 	ros::Subscriber car_angle_sub = n.subscribe("my_car_angle", 1000, callback_angle);
