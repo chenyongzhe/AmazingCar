@@ -19,8 +19,9 @@ add_message_files(
     FILES
     my_location_msg.msg
     my_angle_msg.msg
-    my_gps_state.msg	
+    my_gps_state.msg
     my_lidar_distance.msg
+	my_server_cmd.msg
 )
 
 generate_messages(
@@ -58,14 +59,8 @@ endif()
 ## Sources
 set(serial_SRCS
     src/serial.cc
-    src/pid.cpp
     include/serial/serial.h
     include/serial/v8stdint.h
-    include/magicPath.h
-    include/magicPoint.h
-    include/magicVector.h
-    include/pidClass.h
-    include/wheelSpeed.h
 )
 if(APPLE)
 	# If OSX
@@ -96,10 +91,6 @@ add_executable(joy_subscriber examples/joy_subscriber.cpp)
 add_executable(serial_subscriber examples/serial_subscriber.cpp)
 add_executable(serial_example examples/serial_example.cc)
 
-add_executable(my_car_angle_publisher src/my_car_angle_publisher.cpp)
-add_executable(my_car_controller src/my_car_controller.cpp)
-add_executable(my_car_front_location_publisher src/my_car_front_location_publisher.cpp)
-add_executable(my_car_rear_location_publisher src/my_car_rear_location_publisher.cpp)
 add_executable(my_tar_location_publisher src/my_tar_location_publisher.cpp)
 add_executable(algorithm src/algorithm.cpp)
 add_executable(gprs_location_publisher src/gprs_location_publisher.cpp)
@@ -108,6 +99,7 @@ add_executable(ui_transdata src/ui_transdata.cpp)
 add_executable(gyroscope src/gyroscope.cpp)
 add_executable(beixing_lidar src/beixing_lidar.cpp)
 add_executable(vlp16_lidar src/vlp16_lidar.cpp)
+add_executable(my_server src/my_server.cpp)
 
 add_dependencies(serial_example ${PROJECT_NAME})
 target_link_libraries(serial_example ${PROJECT_NAME})
@@ -127,36 +119,18 @@ target_link_libraries(joy_subscriber
   ${catkin_LIBRARIES}
 )
 
-add_dependencies(my_car_angle_publisher ${PROJECT_NAME})
-target_link_libraries(my_car_angle_publisher ${PROJECT_NAME})
-target_link_libraries(my_car_angle_publisher
-  ${catkin_LIBRARIES}
-)
-
 add_dependencies(my_car_controller ${PROJECT_NAME})
 target_link_libraries(my_car_controller ${PROJECT_NAME})
 target_link_libraries(my_car_controller
   ${catkin_LIBRARIES}
 )
 
-add_dependencies(my_car_front_location_publisher ${PROJECT_NAME})
-target_link_libraries(my_car_front_location_publisher ${PROJECT_NAME})
-target_link_libraries(my_car_front_location_publisher
-  ${catkin_LIBRARIES}
-)
-
-add_dependencies(my_car_rear_location_publisher ${PROJECT_NAME})
-target_link_libraries(my_car_rear_location_publisher ${PROJECT_NAME})
-target_link_libraries(my_car_rear_location_publisher
-  ${catkin_LIBRARIES}
-)
 
 add_dependencies(gyroscope ${PROJECT_NAME})
 target_link_libraries(gyroscope ${PROJECT_NAME})
 target_link_libraries(gyroscope
   ${catkin_LIBRARIES}
 )
-
 
 add_dependencies(algorithm ${PROJECT_NAME})
 target_link_libraries(algorithm ${PROJECT_NAME} ${PCL_LIBRARIES})
@@ -200,6 +174,12 @@ target_link_libraries(vlp16_lidar ${PROJECT_NAME})
 target_link_libraries(vlp16_lidar
   ${catkin_LIBRARIES}
   pcap
+)
+
+add_dependencies(my_server ${PROJECT_NAME})
+target_link_libraries(my_server ${PROJECT_NAME})
+target_link_libraries(my_server
+  ${catkin_LIBRARIES}
 )
 
 ## Include headers
