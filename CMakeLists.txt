@@ -99,7 +99,8 @@ add_executable(ui_transdata src/ui_transdata.cpp)
 add_executable(gyroscope src/gyroscope.cpp)
 add_executable(beixing_lidar src/beixing_lidar.cpp)
 add_executable(vlp16_lidar src/vlp16_lidar.cpp)
-add_executable(my_server src/my_server.cpp)
+#add_executable(my_server src/my_server.cpp)
+
 
 add_dependencies(serial_example ${PROJECT_NAME})
 target_link_libraries(serial_example ${PROJECT_NAME})
@@ -116,12 +117,6 @@ target_link_libraries(serial_subscriber
 add_dependencies(joy_subscriber ${PROJECT_NAME})
 target_link_libraries(joy_subscriber ${PROJECT_NAME})
 target_link_libraries(joy_subscriber
-  ${catkin_LIBRARIES}
-)
-
-add_dependencies(my_car_controller ${PROJECT_NAME})
-target_link_libraries(my_car_controller ${PROJECT_NAME})
-target_link_libraries(my_car_controller
   ${catkin_LIBRARIES}
 )
 
@@ -176,11 +171,11 @@ target_link_libraries(vlp16_lidar
   pcap
 )
 
-add_dependencies(my_server ${PROJECT_NAME})
-target_link_libraries(my_server ${PROJECT_NAME})
-target_link_libraries(my_server
-  ${catkin_LIBRARIES}
-)
+#add_dependencies(my_server ${PROJECT_NAME})
+#target_link_libraries(my_server ${PROJECT_NAME})
+#target_link_libraries(my_server
+#  ${catkin_LIBRARIES}
+#)
 
 ## Include headers
 include_directories(include)
