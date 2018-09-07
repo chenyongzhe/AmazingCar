@@ -2,6 +2,7 @@
 #include "amazing_car/my_server_cmd.h"
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <stdio.h>
 #include <unistd.h>
@@ -46,7 +47,17 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 		return;
 	}
 
+	//#GNSS_OPEN_0$$$$$$$$$$$$$$$$$$
+
 	if(cmd.find("#GNSS_OPEN") == 0){
+		//get serial number
+		cmd = cmd.substr(cmd.find("N_") + 2);
+		cmd = cmd.substr(0, cmd.find("$"));
+		int serial_num = atoi(cmd.c_str());
+		//write file
+		ofstream gnss_cfg_file("/home/jlurobot/catkin_ws/src/amazing_car/config/gnss_serial.cfg");
+		gnss_cfg_file << serial_num;
+		//start service
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/gnss.sh");
 		return;
 	}
