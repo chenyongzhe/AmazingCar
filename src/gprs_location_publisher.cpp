@@ -86,9 +86,11 @@ void callback_tar_location(const amazing_car::my_location_msg msg){
 	tar_location_y = msg.y;
 }
 
+int shutdown_cmd = 1;
+
 void callback_server(const amazing_car::my_server_cmd cmd){
     if(cmd.gnss_cmd == 0){
-        system("exit");
+        shutdown_cmd = 0;
     }
 }
 
@@ -111,7 +113,7 @@ int main(int argc, char ** argv){
 	ori_data.lon = 12516.63578153;
 
     std::ifstream gnss_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/gnss_serial.cfg");
-    int serial_num = 0;
+    int serial_num = 111;
     gnss_cfg >> serial_num;
     char serial_num_str[20];
     memset(serial_num_str, 0, 20);
@@ -129,6 +131,9 @@ int main(int argc, char ** argv){
     ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
 	ros::Rate rate(120);
 	while(ros::ok()){
+        if(shutdown_cmd == 0){
+			break;
+		}
 		location_str.clear();
 		amazing_car::my_location_msg location_msg;
 		amazing_car::my_angle_msg angle_msg;

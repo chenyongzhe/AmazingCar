@@ -43,9 +43,12 @@ float tar_location_y = 0;
 
 bool stop_flag = false;
 
+int shutdown_cmd = 1;
+
 void callback_server(const amazing_car::my_server_cmd cmd){
-    if(cmd.algorithm_cmd == 0){
-        system("exit");
+    
+	if(cmd.algorithm_cmd == 0){
+       shutdown_cmd = 0;
     }
 }
 
@@ -209,6 +212,9 @@ int main(int argc, char ** argv){
 	ros::Publisher cmd_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 1000);
 	ros::Rate rate(80);
 	while(ros::ok()){
+		if(shutdown_cmd == 0){
+			break;
+		}
 		if(!stop_flag){
 			//printf("1\n");
 			//printf("Angle:%f L_X:%f L_Y:%f T_X:%f T_Y:%f\n", car_angle, car_front_location_x, car_front_location_y, pathToTraverse.front().x, pathToTraverse.front().y);

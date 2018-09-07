@@ -78,9 +78,11 @@ float stop_distance = 1;
 std::queue<CYCarPoint> tar_points;
 int th_count = 0;
 
+int shutdown_cmd = 1;
+
 void callback_server(const amazing_car::my_server_cmd cmd){
     if(cmd.ui_cmd == 0){
-        system("exit");
+        shutdown_cmd = 0;
     }
 }
 
@@ -115,6 +117,9 @@ int main(int argc, char ** argv){
 	auto t = thread(gjm_tar_thread,0);
 
 	while(ros::ok()){
+		if(shutdown_cmd == 0){
+			break;
+		}
 		//printf("%f, %f, %f\n", car_location_x, car_location_y, car_angle);
 		SendCarData(car_location_x, car_location_y, (-90 - car_angle),location_state);
 		ros::spinOnce();

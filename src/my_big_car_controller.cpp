@@ -5,6 +5,7 @@
 #include <string>
 #include <stdio.h>
 #include <math.h>
+#include <fstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -19,9 +20,11 @@ using namespace std;
 int direction = 50;
 int speed = 50;
 
+int shutdown_cmd = 1;
+
 void callback_server(const amazing_car::my_server_cmd cmd){
     if(cmd.controller_cmd == 0){
-        system("exit");
+        shutdown_cmd = 0;
     }
 }
 
@@ -76,7 +79,7 @@ std::string get_res(){
 int main(int argc, char ** argv){
 
 	std::ifstream controller_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/controller.cfg");
-    int serial_num = 0;
+    int serial_num = 111;
     controller_cfg >> serial_num;
     char serial_num_str[20];
     memset(serial_num_str, 0, 20);
@@ -89,6 +92,9 @@ int main(int argc, char ** argv){
 	ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
 	ros::Rate rate(20);
 	while(ros::ok()){
+		if(shutdown_cmd == 0){
+			break;
+		}
 		std::string test_string = get_res();
 	   	my_serial.write(test_string);
 		cout<<test_string;

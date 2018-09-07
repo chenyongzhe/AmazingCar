@@ -66,10 +66,31 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 		//start service
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/gnss.sh");
 	}
+
+	if(cmd.find("#CONTROLLER_OPEN") == 0){
+		//get serial number
+		cmd = cmd.substr(cmd.find("N_") + 2);
+		cmd = cmd.substr(0, cmd.find("$"));
+		int serial_num = atoi(cmd.c_str());
+		//write file
+		ofstream gnss_cfg_file("/home/jlurobot/catkin_ws/src/amazing_car/config/controller.cfg");
+		gnss_cfg_file << serial_num;
+		//start service
+		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/controller.sh");
+	}
 	
 	if(cmd.find("#ALGORITHM_OPEN") == 0){
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/algorithm.sh");
 	}
+
+	if(cmd.find("#VLP_OPEN") == 0){
+		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/vlp.sh");
+	}
+
+	if(cmd.find("#UI_OPEN") == 0){
+		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/ui.sh");
+	}
+
 
 	amazing_car::my_server_cmd ros_cmd;
 	ros_cmd.gnss_cmd = 1;
