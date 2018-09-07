@@ -1,4 +1,5 @@
 #include "ros/ros.h"
+#include "amazing_car/my_server_cmd.h"
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/conversions.h>
 #include <pcl/point_cloud.h>
@@ -41,6 +42,12 @@ float tar_location_x = 0;
 float tar_location_y = 0;
 
 bool stop_flag = false;
+
+void callback_server(const amazing_car::my_server_cmd cmd){
+    if(cmd.algorithm_cmd == 0){
+        system("exit");
+    }
+}
 
 void scanCallbackRPLIDARA2(const sensor_msgs::LaserScan::ConstPtr& scan){
     int count = scan->scan_time / scan->time_increment;
@@ -179,7 +186,7 @@ geometry_msgs::Twist algorithm(float car_angle, float car_front_location_x, floa
 	magicPoint tarPoint(tar_location_x, tar_loaction_y);
 	
 
-        wheelSpeed result = pidClass::simpleAlgorithm(frontPoint, tarPoint, car_angle, stop_distance);
+    wheelSpeed result = pidClass::simpleAlgorithm(frontPoint, tarPoint, car_angle, stop_distance);
 	//wheelSpeed result = pidClass::traverse(frontPoint, car_angle, stop_distance);
 
 	//printf("%f %f\n", result.l, result.r);
@@ -197,7 +204,7 @@ int main(int argc, char ** argv){
 	//ros::Subscriber sub1 = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallbackRPLIDARA2);
 	ros::Subscriber sub2 = n.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1000, scanCallbackVLP16);
 	//ros::Subscriber sub3 = n.subscribe<amazing_car::my_lidar_distance>("/vlp16_lidar", 1000, scanCallbackVlp16New);
-
+	ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
 	ros::Subscriber tar_location_sub = n.subscribe("my_tar_location", 1000, callback_tar_location);
 	ros::Publisher cmd_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 1000);
 	ros::Rate rate(80);

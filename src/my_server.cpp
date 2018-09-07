@@ -19,13 +19,19 @@ int main(int argc, char ** argv){
 	ros::NodeHandle n;
 	ros::Publisher cmd_pub = n.advertise<amazing_car::my_server_cmd>("server_cmd", 1000);
 	ros::Rate rate(20);
+	//auth
+	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/gnss.sh");
+	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/algorithm.sh");
+	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/controller.sh");
+	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/ui.sh");
+	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/vlp.sh");
+	//main circle
 	while(ros::ok()){
 		//get cmd
 		std::string cmd_str;
 	   	my_serial.readline(cmd_str);
 		cout<<cmd_str;
 		process_cmd(cmd_pub, cmd_str);
-		//pub cmd
 		
 		//circle
 		usleep(40000);
@@ -59,22 +65,44 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 		gnss_cfg_file << serial_num;
 		//start service
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/gnss.sh");
-		return;
 	}
 	
 	if(cmd.find("#ALGORITHM_OPEN") == 0){
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/algorithm.sh");
-		return;
 	}
 
-
 	amazing_car::my_server_cmd ros_cmd;
-	ros_cmd.gnss_cmd = 2;
-	ros_cmd.ui_cmd = 2;
-	ros_cmd.algorithm_cmd = 2;
-	ros_cmd.controller_cmd = 2;
-	ros_cmd.vlp16_cmd = 2;
-	ros_cmd.beixing_cmd = 2;
-	ros_cmd.ins_cmd = 2;
+	ros_cmd.gnss_cmd = 1;
+	ros_cmd.ui_cmd = 1;
+	ros_cmd.algorithm_cmd = 1;
+	ros_cmd.controller_cmd = 1;
+	ros_cmd.vlp16_cmd = 1;
+	ros_cmd.beixing_cmd = 1;
+	ros_cmd.ins_cmd = 1;
+
+	if(cmd.find("#GNSS_CLOSE") == 0){
+		ros_cmd.gnss_cmd = 0;
+	}
+
+	if(cmd.find("#UI_CLOSE") == 0){
+		ros_cmd.ui_cmd = 0;
+	}
+
+	if(cmd.find("#ALGORITHM_CLOSE") == 0){
+		ros_cmd.algorithm_cmd = 0;
+	}
+
+	if(cmd.find("#CONTROLLER_CLOSE") == 0){
+		ros_cmd.controller_cmd = 0;
+	}
+
+	if(cmd.find("#CONTROLLER_SHUTDOWN_ON") == 0){
+		ros_cmd.controller_cmd = 2;
+	}
+
+	if(cmd.find("#CONTROLLER_SHUTDOWN_OFF") == 0){
+		ros_cmd.controller_cmd = 3;
+	}
+
 	cmd_pub.publish(ros_cmd);
 }

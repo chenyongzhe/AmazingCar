@@ -1,8 +1,10 @@
 #include "ros/ros.h"
+#include "amazing_car/my_server_cmd.h"
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_angle_msg.h"
 #include "amazing_car/my_gps_state.h"
 #include "stdio.h"
+#include <fstream>
 
 // OS Specific sleep
 #ifdef _WIN32
@@ -84,6 +86,12 @@ void callback_tar_location(const amazing_car::my_location_msg msg){
 	tar_location_y = msg.y;
 }
 
+void callback_server(const amazing_car::my_server_cmd cmd){
+    if(cmd.gnss_cmd == 0){
+        system("exit");
+    }
+}
+
 
 GPGGA_Data decodeGPGGA(std::string gpgga_msg);
 GPNTR_Data decodeGPNTR(std::string gpntr_msg);
@@ -96,13 +104,21 @@ Vec2d get_distance1(double latDest, double lngDest, double latOrg, double lngOrg
 
 GPGGA_Data ori_data;
 
-serial::Serial my_serial("/dev/ttyUSB1", 115200, serial::Timeout::simpleTimeout(1000));
-
 int main(int argc, char ** argv){
 	//ori_data.lat = 4349.15060000;
 	//ori_data.lon = 12516.63578100;
 	ori_data.lat = 4349.15050130;
 	ori_data.lon = 12516.63578153;
+
+    std::ifstream gnss_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/gnss_serial.cfg");
+    int serial_num = 0;
+    gnss_cfg >> serial_num;
+    char serial_num_str[20];
+    memset(serial_num_str, 0, 20);
+    sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
+    serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
+
+
 	ros::init(argc, argv, "gprs_location_publisher");
 	ros::NodeHandle n;
 	string location_str;
@@ -110,6 +126,7 @@ int main(int argc, char ** argv){
 	ros::Publisher angle_pub = n.advertise<amazing_car::my_angle_msg>("my_car_angle", 1000);
 	ros::Publisher gps_state_pub = n.advertise<amazing_car::my_gps_state>("my_gps_state", 1000);
 	ros::Subscriber tar_location_sub = n.subscribe("my_tar_location", 1000, callback_tar_location);
+    ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
 	ros::Rate rate(120);
 	while(ros::ok()){
 		location_str.clear();

@@ -1,4 +1,5 @@
 #include "ros/ros.h"
+#include "amazing_car/my_server_cmd.h"
 #include "amazing_car/my_angle_msg.h"
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_gps_state.h"
@@ -77,6 +78,12 @@ float stop_distance = 1;
 std::queue<CYCarPoint> tar_points;
 int th_count = 0;
 
+void callback_server(const amazing_car::my_server_cmd cmd){
+    if(cmd.ui_cmd == 0){
+        system("exit");
+    }
+}
+
 void callback_angle(const amazing_car::my_angle_msg msg){
 	car_angle = msg.yaw;
 }
@@ -96,6 +103,7 @@ int main(int argc, char ** argv){
 	Connect("192.168.188.53");
 	//Connect("192.168.0.124");
 	//Connect("169.254.1.145");
+	ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
 	ros::Subscriber car_angle_sub = n.subscribe("my_car_angle", 1000, callback_angle);
 	ros::Subscriber car_location_sub = n.subscribe("my_car_location", 1000, callback_location);
 	ros::Subscriber gps_state_sub = n.subscribe("my_gps_state", 1000, callback_state);
