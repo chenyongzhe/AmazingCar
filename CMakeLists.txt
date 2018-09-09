@@ -21,7 +21,8 @@ add_message_files(
     my_angle_msg.msg
     my_gps_state.msg
     my_lidar_distance.msg
-	my_server_cmd.msg
+    my_server_cmd.msg
+    my_checkpoints.msg
 )
 
 generate_messages(

@@ -1,8 +1,10 @@
 #include "ros/ros.h"
 #include "amazing_car/my_server_cmd.h"
+#include "amazing_car/my_checkpoints.h"
 
 #include <iostream>
 #include <fstream>
+#include <queue>
 #include <string>
 #include <stdio.h>
 #include <unistd.h>
@@ -10,14 +12,22 @@
 
 using namespace std;
 
+extern struct CYCarPoint;
+
 serial::Serial my_serial("/dev/ttyUSB0", 115200, serial::Timeout::simpleTimeout(1000));
 
+void callback_state(const amazing_car::my_car_state state);
+void SendCarData(float x,float y,float angle,int state);
 void process_cmd(const ros::Publisher & cmd_pub, string cmd);
+void init_tars_queue(string cmd);
+void add_tar_to_queue(std::queue<CYCarPoint> & queue, string cmd);
 
 int main(int argc, char ** argv){
 	ros::init(argc, argv, "my_server");
 	ros::NodeHandle n;
 	ros::Publisher cmd_pub = n.advertise<amazing_car::my_server_cmd>("server_cmd", 1000);
+	ros::Publisher tars_pub = n.advertise<amazing_car::my_checkpoints>("my_checkpoints", 1000);
+	ros::Subscriber car_state_sub = n.subscribe("my_car_state", 1000, callback_state);
 	ros::Rate rate(20);
 	//auth
 	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/gnss.sh");
@@ -32,7 +42,9 @@ int main(int argc, char ** argv){
 	   	my_serial.readline(cmd_str);
 		cout<<cmd_str;
 		process_cmd(cmd_pub, cmd_str);
-		
+		//send tars
+
+
 		//circle
 		usleep(40000);
 		ros::spinOnce();
@@ -91,6 +103,13 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/ui.sh");
 	}
 
+	if(cmd.find("#TARS_COUNT") == 0){
+		init_tars_queue(cmd);
+	}
+
+	if(cmd.find("#TARS_") == 0){
+		add_tar_to_queue(cmd);
+	}
 
 	amazing_car::my_server_cmd ros_cmd;
 	ros_cmd.gnss_cmd = 1;
@@ -126,4 +145,23 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 	}
 
 	cmd_pub.publish(ros_cmd);
+}
+
+void SendCarData(float x,float y,float angle,int state){
+	char t[40];
+	sprintf(t,"#CARSTATE_%.3f_%.3f_%.2f_%d$$$$$",x,y,angle,state);
+	std::string res = t;
+	my_serial.write(res);
+}
+
+void callback_state(const amazing_car::my_car_state state){
+	SendCarData(state.x, state.y, state.angle, state.state);
+}
+
+void init_tars_queue(string cmd){
+
+}
+
+void add_tar_to_queue(queue<CYCarPoint> & queue, string cmd){
+	
 }
