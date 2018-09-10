@@ -23,6 +23,7 @@ add_message_files(
     my_lidar_distance.msg
     my_server_cmd.msg
     my_checkpoints.msg
+    my_car_state.msg
 )
 
 generate_messages(

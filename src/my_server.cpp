@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "amazing_car/my_server_cmd.h"
 #include "amazing_car/my_checkpoints.h"
+#include "amazing_car/my_car_state.h"
 
 #include <iostream>
 #include <fstream>
@@ -12,7 +13,14 @@
 
 using namespace std;
 
-extern struct CYCarPoint;
+struct CYCarPoint{
+	CYCarPoint(float x, float y){
+		this->x = x;
+		this->y = y;
+	}
+	float x;
+	float y;	
+};
 
 int ordered_cmd_count = 0;
 int recieved_cmd_count = 0;
@@ -67,7 +75,7 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 		cmd = cmd.substr(0, cmd.size() - 1);
 	}
 
-	if(cmd.size() != 30){
+	if(cmd.size() != 50){
 		printf("cmd_length:%d\n", cmd.size());
 		return;
 	}
@@ -110,7 +118,7 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/ui.sh");
 	}
 
-	if(cmd.find("#TARS_COUNT") == 0){
+	if(cmd.find("#TAR_COUNT") == 0){
 		init_tars_queue(tars, cmd);
 	}
 
@@ -155,8 +163,8 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 }
 
 void SendCarData(float x,float y,float angle,int state){
-	char t[40];
-	sprintf(t,"#CARSTATE_%.3f_%.3f_%.2f_%d$$$$$",x,y,angle,state);
+	char t[100];
+	sprintf(t,"#CARSTATE_X%.3f_Y%.3f_A%.2f_S%d$$$$$\r\n",x,y,angle,state);
 	std::string res = t;
 	my_serial.write(res);
 }
@@ -177,6 +185,7 @@ void init_tars_queue(vector<CYCarPoint> & tar_vector, string cmd){
 }
 
 void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd){
+	//printf("ordered_cmd_count is %d\n", ordered_cmd_count);
 	if(ordered_cmd_count == 0){
 		return;
 	}
@@ -185,10 +194,12 @@ void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd){
 	int _X_index = cmd.find("_X");
 	int _Y_index = cmd.find("_Y");
 	int _N = atoi(cmd.substr(_N_index + 2, _X_index - _N_index).c_str());
-	int _X = atoi(cmd.substr(_X_index + 2, _Y_index - _X_index).c_str());
-	int _Y = atoi(cmd.substr(_Y_index + 2, cmd.find("$") - _Y_index).c_str());
+	float _X = atof(cmd.substr(_X_index + 2, _Y_index - _X_index).c_str());
+	float _Y = atof(cmd.substr(_Y_index + 2, cmd.find("$") - _Y_index).c_str());
 	
+	//printf("_N %d _X %f _Y %f\n", _N, _X, _Y);
 	if(_N >= ordered_cmd_count){
+		
 		return;
 	}
 
@@ -198,7 +209,8 @@ void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd){
 		cmd_flag[_N] = 1;
 		recieved_cmd_count++;
 		if(recieved_cmd_count == ordered_cmd_count){
-			amazing::my_checkpoints checkpoints;
+			
+			amazing_car::my_checkpoints checkpoints;
 			checkpoints.count = recieved_cmd_count;
 			checkpoints.X.resize(recieved_cmd_count);
 			checkpoints.Y.resize(recieved_cmd_count);
@@ -214,6 +226,7 @@ void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd){
 		}
 	}else if(cmd_flag[_N] == 1){
 		//wrong
+		printf("tar_cmds_wrongn\n");
 		ordered_cmd_count = 0;
 		recieved_cmd_count = 0;
 		memset(cmd_flag, 0, 100);

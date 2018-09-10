@@ -9,9 +9,9 @@
 #include "geometry_msgs/Twist.h"
 #include "stdio.h"
 #include "sensor_msgs/LaserScan.h"
-
+#include "serial/serial.h"
 #include <queue>
-
+#include <fstream>
 #include <stdio.h>
 #include <thread>
 #include <stdio.h>
@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <math.h>
-
+#include <mutex>
 
 struct CarData{
 	float x,y,angle;
@@ -43,6 +43,8 @@ float car_location_y = 0;
 int location_state = 0;
 ros::Publisher * tar_pub_ptr = NULL;
 
+std::mutex queue_mtx;
+
 void update_tar(int count, const CYCarPoint* points);
 void gjm_tar_thread(int);
 
@@ -57,12 +59,6 @@ int th_count = 0;
 int shutdown_cmd = 1;
 
 void callback_checkpoints(const amazing_car::my_checkpoints points){
-	static bool bt = false;
-	if(bt){
-		t.join();
-		bt = true;
-	}
-	queue_mtx.lock();
 	tar_points = queue<CYCarPoint>();
 	while(!tar_points.empty()){
 		tar_points.pop();
@@ -70,7 +66,6 @@ void callback_checkpoints(const amazing_car::my_checkpoints points){
 	for(int i = 0;i<points.count;i++){
 		tar_points.push(CYCarPoint(points.X[i], points.Y[i]));
 	}
-	queue_mtx.unlock();
 }
 
 void callback_server(const amazing_car::my_server_cmd cmd){
@@ -102,7 +97,6 @@ int main(int argc, char ** argv){
 	memset(serial_num_str, 0, 20);
 	sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
 	serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
-	p_myserial = &my_serial;
 
 	ros::init(argc, argv, "ui_transdata");
 	ros::NodeHandle n;
@@ -130,6 +124,7 @@ int main(int argc, char ** argv){
 		msg.angle = -90 - car_angle;
 		msg.state = location_state;
 		car_pub.publish(msg);
+		printf("car: %f %f %f %f\n", msg.x, msg.y, msg.angle, msg.state);
 		ros::spinOnce();
 		rate.sleep();
 	}
