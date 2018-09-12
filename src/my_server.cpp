@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "serial/serial.h"
+#include <thread>
 
 using namespace std;
 
@@ -27,8 +28,8 @@ int recieved_cmd_count = 0;
 int cmd_flag[100] = {0};
 ros::Publisher * p_tars_pub = nullptr;
 vector<CYCarPoint> tars;
-
-serial::Serial my_serial("/dev/ttyUSB0", 115200, serial::Timeout::simpleTimeout(1000));
+serial::Serial * p_my_serial = nullptr;
+ros::Publisher * p_cmd_pub = nullptr;
 
 void callback_state(const amazing_car::my_car_state state);
 void SendCarData(float x,float y,float angle,int state);
@@ -36,37 +37,55 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd);
 void init_tars_queue(vector<CYCarPoint> & tar_vector, string cmd);
 void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd);
 
+void gjm_data_thread(int);
+
+
+int temp_test = 0;
+
+void gjm_cmd_thread(int){
+	//get cmd		
+	while(true){
+		std::string cmd_str;
+		p_my_serial->readline(cmd_str);
+		cout<<cmd_str;
+		process_cmd(*p_cmd_pub, cmd_str);
+	}	
+}
+
 int main(int argc, char ** argv){
+	char temp[50];
+	memset(temp, 0, 50);
+	int serial_number = atoi(argv[1]);
+	sprintf(temp, "/dev/ttyUSB%d", serial_number);
+	serial::Serial my_serial(temp, 115200, serial::Timeout::simpleTimeout(1000));
+	p_my_serial = &my_serial;
 	ros::init(argc, argv, "my_server");
 	ros::NodeHandle n;
 	ros::Publisher cmd_pub = n.advertise<amazing_car::my_server_cmd>("server_cmd", 1000);
+	p_cmd_pub = &cmd_pub;
 	ros::Publisher tars_pub = n.advertise<amazing_car::my_checkpoints>("my_checkpoints", 1000);
 	p_tars_pub = &tars_pub;
 	ros::Subscriber car_state_sub = n.subscribe("my_car_state", 1000, callback_state);
-	ros::Rate rate(20);
+	ros::Rate rate(50);
 	//auth
 	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/gnss.sh");
 	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/algorithm.sh");
 	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/controller.sh");
 	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/ui.sh");
 	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/vlp.sh");
+	auto t = thread(gjm_cmd_thread,0);
 	//main circle
 	while(ros::ok()){
-		//get cmd
-		std::string cmd_str;
-	   	my_serial.readline(cmd_str);
-		cout<<cmd_str;
-		process_cmd(cmd_pub, cmd_str);
-		//send tars
-
-
 		//circle
-		usleep(40000);
 		ros::spinOnce();
+		rate.sleep();
 	}
 	return 0;
 }
 
+void callback_state(const amazing_car::my_car_state state){
+	SendCarData(state.x, state.y, state.angle, 4);
+}
 
 void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 	if(cmd.size() == 0){
@@ -164,13 +183,10 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 
 void SendCarData(float x,float y,float angle,int state){
 	char t[100];
-	sprintf(t,"#CARSTATE_X%.3f_Y%.3f_A%.2f_S%d$$$$$\r\n",x,y,angle,state);
+	sprintf(t,"#CARSTATE_X%.3f_Y%.3f_A%.2f_S%d$$$$$\r\n",x, y, angle, 4);
 	std::string res = t;
-	my_serial.write(res);
-}
-
-void callback_state(const amazing_car::my_car_state state){
-	SendCarData(state.x, state.y, state.angle, state.state);
+	//printf("send: %s\n", res.c_str());
+	p_my_serial->write(res);
 }
 
 void init_tars_queue(vector<CYCarPoint> & tar_vector, string cmd){
@@ -233,3 +249,4 @@ void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd){
 		tar_vector.clear();
 	}
 }
+

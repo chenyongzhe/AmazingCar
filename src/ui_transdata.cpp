@@ -90,13 +90,13 @@ void callback_state(const amazing_car::my_gps_state msg){
 
 int main(int argc, char ** argv){
 
-	std::ifstream data_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/data_transer.cfg");
-	int serial_num = 111;
-	data_cfg >> serial_num;
-	char serial_num_str[20];
-	memset(serial_num_str, 0, 20);
-	sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
-	serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
+	//std::ifstream data_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/data_transer.cfg");
+	//int serial_num = 111;
+	//data_cfg >> serial_num;
+	//char serial_num_str[20];
+	//memset(serial_num_str, 0, 20);
+	//sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
+	//serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
 
 	ros::init(argc, argv, "ui_transdata");
 	ros::NodeHandle n;
@@ -106,27 +106,36 @@ int main(int argc, char ** argv){
 	ros::Subscriber gps_state_sub = n.subscribe("my_gps_state", 1000, callback_state);
 	ros::Subscriber checkpoints_sub = n.subscribe("my_checkpoints", 1000, callback_checkpoints);
 	ros::Publisher tar_pub = n.advertise<amazing_car::my_location_msg>("/my_tar_location", 1000);
-	ros::Publisher car_pub = n.advertise<amazing_car::my_car_state>("/my_car_state", 1000);
+	ros::Publisher car_pub = n.advertise<amazing_car::my_car_state>("/my_car_state", 50);
 	
 	tar_pub_ptr = &tar_pub;
 
-	ros::Rate rate(15);
+	ros::Rate rate(100);
 
 	auto t = thread(gjm_tar_thread,0);
-
+	
+	int aaaa = 0;
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
 			break;
 		}
 		amazing_car::my_car_state msg;
+		
 		msg.x = car_location_x;
 		msg.y = car_location_y;
 		msg.angle = -90 - car_angle;
 		msg.state = location_state;
+		/*
+		msg.x = 20 * cos(aaaa);
+		msg.y = 20 * sin(aaaa);
+		msg.angle = 0;
+		msg.state = 4;
+		*/
 		car_pub.publish(msg);
 		printf("car: %f %f %f %f\n", msg.x, msg.y, msg.angle, msg.state);
 		ros::spinOnce();
 		rate.sleep();
+		aaaa++;
 	}
 	return 0;
 }
