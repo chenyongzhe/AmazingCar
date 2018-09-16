@@ -182,11 +182,19 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 }
 
 void SendCarData(float x,float y,float angle,int state){
-	char t[100];
-	memset(t, 0, 100);
+	char t[50];
+	memset(t, 0, 50);
 	sprintf(t,"#CARSTATE_X%.3f_Y%.3f_A%.2f_S%d$",x, y, angle, 4);
-
+	t[49] = '%';
+	for(int i = 48;i>=0;i--){
+		if(t[i] == '$'){
+			break;
+		}else{
+			t[i] = '$';
+		}
+	}
 	std::string res = t;
+	
 	//printf("send: %s\n", res.c_str());
 	p_my_serial->write(res);
 }

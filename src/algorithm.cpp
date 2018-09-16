@@ -192,7 +192,7 @@ geometry_msgs::Twist algorithm(float car_angle, float car_front_location_x, floa
     	wheelSpeed result = pidClass::simpleAlgorithm(frontPoint, tarPoint, car_angle, stop_distance);
 	//wheelSpeed result = pidClass::traverse(frontPoint, car_angle, stop_distance);
 
-	printf("speed %f %f\n", result.left, result.right);
+	//printf("speed %f %f\n", result.left, result.right);
 	cmd.linear.x = result.left;
 	cmd.linear.y = result.right;
 	/////////////////////////////////////////
