@@ -84,7 +84,7 @@ int main(int argc, char ** argv){
 }
 
 void callback_state(const amazing_car::my_car_state state){
-	SendCarData(state.x, state.y, state.angle, 4);
+	SendCarData(state.x, state.y, state.angle, state.state);
 }
 
 void process_cmd(const ros::Publisher & cmd_pub, string cmd){
@@ -183,7 +183,9 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 
 void SendCarData(float x,float y,float angle,int state){
 	char t[100];
-	sprintf(t,"#CARSTATE_X%.3f_Y%.3f_A%.2f_S%d$$$$$\r\n",x, y, angle, 4);
+	memset(t, 0, 100);
+	sprintf(t,"#CARSTATE_X%.3f_Y%.3f_A%.2f_S%d$",x, y, angle, 4);
+
 	std::string res = t;
 	//printf("send: %s\n", res.c_str());
 	p_my_serial->write(res);

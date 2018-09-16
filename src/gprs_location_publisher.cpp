@@ -117,7 +117,7 @@ int main(int argc, char ** argv){
     gnss_cfg >> serial_num;
     char serial_num_str[20];
     memset(serial_num_str, 0, 20);
-    sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
+    sprintf(serial_num_str, "/dev/ttyUSB2");
     serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
 
 
@@ -215,6 +215,7 @@ int main(int argc, char ** argv){
 			}else {
 				angle_msg.yaw = 360 + beta - alpha - diff_angle;
 			}
+			//angle_msg.yaw += 90;
 			if(angle_msg.yaw < 0){
 				angle_msg.yaw += 360;
 			}

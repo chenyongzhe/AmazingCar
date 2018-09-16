@@ -83,7 +83,7 @@ int main(int argc, char ** argv){
     controller_cfg >> serial_num;
     char serial_num_str[20];
     memset(serial_num_str, 0, 20);
-    sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
+    sprintf(serial_num_str, "/dev/ttyUSB1");
     serial::Serial my_serial(serial_num_str, 57600, serial::Timeout::simpleTimeout(1000));
 
 	ros::init(argc, argv, "my_big_car_controller");
