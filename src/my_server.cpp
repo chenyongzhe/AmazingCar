@@ -56,7 +56,7 @@ int main(int argc, char ** argv){
 	char temp[50];
 	memset(temp, 0, 50);
 	int serial_number = atoi(argv[1]);
-	sprintf(temp, "/dev/ttyUSB%d", serial_number);
+	sprintf(temp, "/dev/ttyS%d", serial_number);
 	serial::Serial my_serial(temp, 115200, serial::Timeout::simpleTimeout(1000));
 	p_my_serial = &my_serial;
 	ros::init(argc, argv, "my_server");
