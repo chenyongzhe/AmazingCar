@@ -15,9 +15,28 @@
 
 #include "serial/serial.h"
 
-using namespace std;
+#define BYTE unsigned char
 
 int shutdown_cmd = 1;
+
+//int 转 4字节 BYTE[],
+void intToByte(int i, BYTE abyte[]) {
+	abyte[3] = (BYTE)(0x000000ff & i);
+	abyte[2] = (BYTE)((0x0000ff00 & i) >> 8);
+	abyte[1] = (BYTE)((0x00ff0000 & i) >> 16);
+	abyte[0] = (BYTE)((0xff000000 & i) >> 24);
+}
+
+//4字节 BYTE[] 转 int 
+int bytesToInt(BYTE bytes[]) {
+	int addr = bytes[3] & 0xFF;
+	addr |= ((bytes[2] << 8) & 0xFF00);
+	addr |= ((bytes[1] << 16) & 0xFF0000);
+	addr |= ((bytes[0] << 24) & 0xFF000000);
+	//long int result = (x[0] << 24) + (x[1] << 16) + (x[2] << 8) + x[3];   
+	return addr;
+}
+
 
 void callback_server(const amazing_car::my_server_cmd cmd){
     if(cmd.controller_cmd == 0){
@@ -25,30 +44,65 @@ void callback_server(const amazing_car::my_server_cmd cmd){
     }
 }
 
+int speed = 0; //0.01m/s 
+int direction = 0; //0.001rad 
+
 
 void callback(const geometry_msgs::Twist& cmd_vel){
 	float left = cmd_vel.linear.x;
 	float right = cmd_vel.linear.y;
 	if(left == 50 && right == 350){
-
+		speed = 20;
+		direction = 314;
 	}else if(left == 350 && right == 50){
-
+		speed = 20;
+		direction = -314;
 	}else if(left == 350 && right == 350){
-
+		speed = 30;
+		direction = 0;
 	}else{  
-
+		speed = 0;
+		direction = 0;
 	}
 }
 
-std::string get_res(){
-	char t[20];
-	sprintf(t,"MAS %d %d\r\n",speed,direction);
-	std::string res = t;
-	return res;
+int id = 0;
+BYTE temp = new BYTE[4];
+
+void get_res(char* buffer, int buffer_size){
+	int data_size = 0;
+	if(buffer_size < 16){
+		cout<<"The buffer doesn't have enough space\n"<<endl;
+	}
+	if(id >= 255){
+		id = 0;
+	}
+	buffer[0] = 0xAA;
+	buffer[1] = id;
+	buffer[2] = 0x01;
+	buffer[3] = 0;
+	intToByte(speed, temp);
+	buffer[4] = temp[2];
+	buffer[5] = temp[3];
+	buffer[6] = 0;
+	buffer[7] = 0;
+	intToByte(direction, temp);
+	buffer[8] = temp[2];
+	buffer[9] = temp[3];
+	buffer[10] = 0;
+	buffer[11] = 0;
+	buffer[12] = 0;
+	buffer[13] = 0;
+	buffer[14] = 0;
+	for(int i = 0;i<14;i++){
+		buffer[14] += buffer[i];
+	}
+	buffer[15] = 0x55;
+	id++;
+	return data_size;
 }
 
 int main(int argc, char ** argv){
-
 	std::ifstream controller_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/controller.cfg");
     int serial_num = 111;
     controller_cfg >> serial_num;
@@ -56,8 +110,8 @@ int main(int argc, char ** argv){
     memset(serial_num_str, 0, 20);
     sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
     serial::Serial my_serial(serial_num_str, 57600, serial::Timeout::simpleTimeout(1000));
-
-	ros::init(argc, argv, "my_big_car_controller");
+	char buffer = new char[16];
+	ros::init(argc, argv, "my_wheeled_car_controller");
 	ros::NodeHandle n;
 	ros::Subscriber sub = n.subscribe("cmd_vel", 1000, callback);
 	ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
@@ -66,9 +120,9 @@ int main(int argc, char ** argv){
 		if(shutdown_cmd == 0){
 			break;
 		}
-		std::string test_string = get_res();
-	   	my_serial.write(test_string);
-		cout<<test_string;
+		get_res(buffer, 16);
+	   	my_serial.write(buffer, 16);
+		cout<<"Speed: " << speed << " Direction: " << direction << endl;
 		usleep(40000);
 		ros::spinOnce();
 	}
