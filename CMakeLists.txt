@@ -99,7 +99,7 @@ add_executable(joy_subscriber examples/joy_subscriber.cpp)
 add_executable(serial_subscriber examples/serial_subscriber.cpp)
 add_executable(serial_example examples/serial_example.cc)
 
-add_executable(my_tar_location_publisher src/my_tar_location_publisher.cpp)
+#add_executable(my_tar_location_publisher src/my_tar_location_publisher.cpp)
 add_executable(algorithm src/algorithm.cpp)
 add_executable(gprs_location_publisher src/gprs_location_publisher.cpp)
 add_executable(my_big_car_controller src/my_big_car_controller.cpp)
@@ -138,12 +138,6 @@ target_link_libraries(gyroscope
 add_dependencies(algorithm ${PROJECT_NAME})
 target_link_libraries(algorithm ${PROJECT_NAME} ${PCL_LIBRARIES})
 target_link_libraries(algorithm
-  ${catkin_LIBRARIES}
-)
-
-add_dependencies(my_tar_location_publisher ${PROJECT_NAME})
-target_link_libraries(my_tar_location_publisher ${PROJECT_NAME})
-target_link_libraries(my_tar_location_publisher
   ${catkin_LIBRARIES}
 )
 

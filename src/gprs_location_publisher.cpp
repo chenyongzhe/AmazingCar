@@ -17,7 +17,9 @@
 
 #include "serial/serial.h"
 #include <math.h>
+#include <sstream>
 
+using namespace std;
 using std::string;
 
 int gps_angle_state = 0;
@@ -81,6 +83,7 @@ struct DMS{
     int dd;
     int mm;
     double ss;
+
 };
 
 struct GprsState{
@@ -172,15 +175,15 @@ int main(int argc, char ** argv){
 		    }else if(data.c_str()[3] == 'G'){
 		        gpgga_data = decodeGPGGA(data);
 
-                gprs_node_state.lon = gpgga_data.lon;
-                gprs_node_state.lat = gpgga_data.lat;
-                gprs_node_state.gprs_state = gpgga_data.state;
+        	        gprs_node_state.lon = gpgga_data.lon;
+            	    gprs_node_state.lat = gpgga_data.lat;
+             	   gprs_node_state.gprs_state = gpgga_data.state;
 
-                state_msg.location_state = gpgga_data.state;
-                state_msg.angle_state = gpgga_data.state;
-                gps_angle_state = gpgga_data.state;
-                gps_state_pub.publish(state_msg);
-                if(gpgga_data.state != 1 && gpgga_data.state != 2 && gpgga_data.state != 4 && gpgga_data.state != 5){
+             	 state_msg.location_state = gpgga_data.state;
+             	 state_msg.angle_state = gpgga_data.state;
+             	 gps_angle_state = gpgga_data.state;
+               	 gps_state_pub.publish(state_msg);
+            	    if(gpgga_data.state != 1 && gpgga_data.state != 2 && gpgga_data.state != 4 && gpgga_data.state != 5){
                     location_msg.x = tar_location_x;
                     location_msg.y = tar_location_y;
                     printf("%d\n", gpgga_data.state);
@@ -245,7 +248,7 @@ int main(int argc, char ** argv){
 		    }
 
             node_state_msg.node_name = "gprs_location_publisher";
-            node_state_msg.state = 1;
+            node_state_msg.node_state = 1;
             node_state_msg.extra_info = "";
             ss << gprs_node_state.lon;
             ss >> node_state_msg.extra_info;

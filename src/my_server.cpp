@@ -37,6 +37,7 @@ ros::Publisher * p_cmd_pub = nullptr;
 
 
 void callback_state(const amazing_car::my_car_state state);
+void callback_nodes_state(const amazing_car::my_node_state state);
 void SendCarData(float x,float y,float angle,int state);
 void process_cmd(const ros::Publisher & cmd_pub, string cmd);
 void init_tars_queue(vector<CYCarPoint> & tar_vector, string cmd);
@@ -115,14 +116,14 @@ void callback_state(const amazing_car::my_car_state state){
 	//SendCarData(state.x, state.y, state.angle, state.state);
 }
 
-void callback_nodes_state(const amazing_car::my_nodes_state state){
+void callback_nodes_state(const amazing_car::my_node_state state){
 	if(state.node_name == "gprs_location_publisher"){
 		string s = state.extra_info;
 		vector<string> attrs = split(s, ' ');
-		float lon = stof(s[0]);
-		float lat = stof(s[1]);
-		float ori_angle = stof(s[2]);
-		int gps_state = stoi(s[3]);
+		float lon = stof(attrs[0]);
+		float lat = stof(attrs[1]);
+		float ori_angle = stof(attrs[2]);
+		int gps_state = stoi(attrs[3]);
 		char t[50];
 		memset(t, 0, 50);
 		sprintf(t,"#GPRSSTATE_N%.3f_T%.3f_A%.3f_S%d$", lon, lat, ori_angle, gps_state);
@@ -140,9 +141,9 @@ void callback_nodes_state(const amazing_car::my_nodes_state state){
 	}else if(state.node_name == "algorithm"){
 		string s = state.extra_info;
 		vector<string> attrs = split(s, ' ');
-		int left_speed = stoi(s[0]);
-		int right_speed = stoi(s[1]);
-		int stop_flag = stoi(s[2]);
+		int left_speed = stoi(attrs[0]);
+		int right_speed = stoi(attrs[1]);
+		int stop_flag = stoi(attrs[2]);
 		char t[50];
 		memset(t, 0, 50);
 		sprintf(t,"#ALGORITHMSTATE_L%d_R%d_S%d$", left_speed, right_speed, stop_flag);
@@ -160,8 +161,8 @@ void callback_nodes_state(const amazing_car::my_nodes_state state){
 	}else if(state.node_name == "my_wheeled_car_controller"){
 		string s = state.extra_info;
 		vector<string> attrs = split(s, ' ');
-		int speed = stoi(s[0]);
-		int direction = stoi(s[1]);
+		int speed = stoi(attrs[0]);
+		int direction = stoi(attrs[1]);
 		char t[50];
 		memset(t, 0, 50);
 		sprintf(t,"#CONTROLLERSTATE_S%d_D%d$", speed, direction);
@@ -176,13 +177,13 @@ void callback_nodes_state(const amazing_car::my_nodes_state state){
 		std::string res = t;
 		p_my_serial->write(res);
 
-	}else if(state.node_data == "ui_transdata"){
+	}else if(state.node_name == "ui_transdata"){
 		string s = state.extra_info;
 		vector<string> attrs = split(s, ' ');
-		float x = stof(s[0]);
-		float y = stof(s[1]);
-		float angle = stof(s[2]);
-		int car_state = stoi(s[3]); 
+		float x = stof(attrs[0]);
+		float y = stof(attrs[1]);
+		float angle = stof(attrs[2]);
+		int car_state = stoi(attrs[3]); 
 
 		char t[50];
 		memset(t, 0, 50);

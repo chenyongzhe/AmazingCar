@@ -130,7 +130,7 @@ int main(int argc, char ** argv){
 		amazing_car::my_node_state node_state_msg;
 
 		node_state_msg.node_name = "ui_transdata";
-		node_state_msg.state = 1;
+		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
 		ss << msg.x;
 		ss >> node_state_msg.extra_info;
