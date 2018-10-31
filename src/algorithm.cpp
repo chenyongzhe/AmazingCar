@@ -228,7 +228,7 @@ int main(int argc, char ** argv){
 
 		amazing_car::my_node_state node_state_msg;
 		node_state_msg.node_name = "algorithm";
-		node_state_msg.state = 1;
+		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
 		ss << algorithm_state.left_speed;
 		ss >> node_state_msg.extra_info;
