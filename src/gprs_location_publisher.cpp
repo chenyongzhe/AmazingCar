@@ -87,7 +87,7 @@ struct GprsState{
     float lon;
     float lat;
     float ori_angle;
-    float gps_state;
+    int gps_state;
 };
 
 void callback_tar_location(const amazing_car::my_location_msg msg){

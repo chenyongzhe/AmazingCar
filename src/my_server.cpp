@@ -7,11 +7,14 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
+#include <vector>
 #include <string>
 #include <stdio.h>
+#include<sys/time.h>
 #include <unistd.h>
 #include "serial/serial.h"
 #include <thread>
+
 
 using namespace std;
 
@@ -32,6 +35,7 @@ vector<CYCarPoint> tars;
 serial::Serial * p_my_serial = nullptr;
 ros::Publisher * p_cmd_pub = nullptr;
 
+
 void callback_state(const amazing_car::my_car_state state);
 void SendCarData(float x,float y,float angle,int state);
 void process_cmd(const ros::Publisher & cmd_pub, string cmd);
@@ -51,6 +55,27 @@ void gjm_cmd_thread(int){
 		cout<<cmd_str;
 		process_cmd(*p_cmd_pub, cmd_str);
 	}	
+}
+
+long getCurrentTime() {  
+   struct timeval tv;  
+   gettimeofday(&tv,NULL);  
+   return tv.tv_sec * 1000 + tv.tv_usec / 1000;  
+}  
+
+static void _split(const std::string &s, char delim, 
+	std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+}
+ 
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    _split(s, delim, elems);
+    return elems;
 }
 
 int main(int argc, char ** argv){
@@ -86,11 +111,95 @@ int main(int argc, char ** argv){
 }
 
 void callback_state(const amazing_car::my_car_state state){
-	SendCarData(state.x, state.y, state.angle, state.state);
+	//expired
+	//SendCarData(state.x, state.y, state.angle, state.state);
 }
 
-void callback_state(const amazing_car::my_nodes_state state){
-	SendCarData(state.x, state.y, state.angle, state.state);
+void callback_nodes_state(const amazing_car::my_nodes_state state){
+	if(state.node_name == "gprs_location_publisher"){
+		string s = state.extra_info;
+		vector<string> attrs = split(s, ' ');
+		float lon = stof(s[0]);
+		float lat = stof(s[1]);
+		float ori_angle = stof(s[2]);
+		int gps_state = stoi(s[3]);
+		char t[50];
+		memset(t, 0, 50);
+		sprintf(t,"#GPRSSTATE_N%.3f_T%.3f_A%.3f_S%d$", lon, lat, ori_angle, gps_state);
+		t[49] = '%';
+		for(int i = 48;i>=0;i--){
+			if(t[i] == '$'){
+				break;
+			}else{
+				t[i] = '$';
+			}
+		}
+		std::string res = t;
+		p_my_serial->write(res);
+
+	}else if(state.node_name == "algorithm"){
+		string s = state.extra_info;
+		vector<string> attrs = split(s, ' ');
+		int left_speed = stoi(s[0]);
+		int right_speed = stoi(s[1]);
+		int stop_flag = stoi(s[2]);
+		char t[50];
+		memset(t, 0, 50);
+		sprintf(t,"#ALGORITHMSTATE_L%d_R%d_S%d$", left_speed, right_speed, stop_flag);
+		t[49] = '%';
+		for(int i = 48;i>=0;i--){
+			if(t[i] == '$'){
+				break;
+			}else{
+				t[i] = '$';
+			}
+		}
+		std::string res = t;
+		p_my_serial->write(res);
+
+	}else if(state.node_name == "my_wheeled_car_controller"){
+		string s = state.extra_info;
+		vector<string> attrs = split(s, ' ');
+		int speed = stoi(s[0]);
+		int direction = stoi(s[1]);
+		char t[50];
+		memset(t, 0, 50);
+		sprintf(t,"#CONTROLLERSTATE_S%d_D%d$", speed, direction);
+		t[49] = '%';
+		for(int i = 48;i>=0;i--){
+			if(t[i] == '$'){
+				break;
+			}else{
+				t[i] = '$';
+			}
+		}
+		std::string res = t;
+		p_my_serial->write(res);
+
+	}else if(state.node_data == "ui_transdata"){
+		string s = state.extra_info;
+		vector<string> attrs = split(s, ' ');
+		float x = stof(s[0]);
+		float y = stof(s[1]);
+		float angle = stof(s[2]);
+		int car_state = stoi(s[3]); 
+
+		char t[50];
+		memset(t, 0, 50);
+		sprintf(t,"#UISTATE_X%.3f_Y%.3f_A%.2f_S%d$",x, y, angle, car_state);
+		t[49] = '%';
+		for(int i = 48;i>=0;i--){
+			if(t[i] == '$'){
+				break;
+			}else{
+				t[i] = '$';
+			}
+		}
+		std::string res = t;
+		p_my_serial->write(res);
+	}
+
+
 }
 
 void process_cmd(const ros::Publisher & cmd_pub, string cmd){
