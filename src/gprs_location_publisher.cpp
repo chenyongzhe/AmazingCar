@@ -3,6 +3,8 @@
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_angle_msg.h"
 #include "amazing_car/my_gps_state.h"
+#include "amazing_car/my_node_state.h"
+
 #include "stdio.h"
 #include <fstream>
 
@@ -81,6 +83,13 @@ struct DMS{
     double ss;
 };
 
+struct GprsState{
+    float lon;
+    float lat;
+    float ori_angle;
+    float gps_state;
+};
+
 void callback_tar_location(const amazing_car::my_location_msg msg){
 	tar_location_x = msg.x;
 	tar_location_y = msg.y;
@@ -94,7 +103,6 @@ void callback_server(const amazing_car::my_server_cmd cmd){
     }
 }
 
-
 GPGGA_Data decodeGPGGA(std::string gpgga_msg);
 GPNTR_Data decodeGPNTR(std::string gpntr_msg);
 GPTRA_Data decodeGPTRA(std::string gptra_msg);
@@ -105,6 +113,7 @@ Vec2d get_distance1(double latDest, double lngDest, double latOrg, double lngOrg
 
 
 GPGGA_Data ori_data;
+GprsState gprs_node_state;
 
 int main(int argc, char ** argv){
 	//ori_data.lat = 4349.15060000;
@@ -119,7 +128,7 @@ int main(int argc, char ** argv){
     memset(serial_num_str, 0, 20);
     sprintf(serial_num_str, "/dev/ttyS%d", serial_num);
     serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
-
+    stringstream ss;
 
 	ros::init(argc, argv, "gprs_location_publisher");
 	ros::NodeHandle n;
@@ -127,6 +136,9 @@ int main(int argc, char ** argv){
 	ros::Publisher location_pub = n.advertise<amazing_car::my_location_msg>("my_car_location", 1000);
 	ros::Publisher angle_pub = n.advertise<amazing_car::my_angle_msg>("my_car_angle", 1000);
 	ros::Publisher gps_state_pub = n.advertise<amazing_car::my_gps_state>("my_gps_state", 1000);
+
+    ros::Publisher state_pub = n.advertise<amazing_car::my_node_state>("/my_nodes_state", 1000);
+
 	ros::Subscriber tar_location_sub = n.subscribe("my_tar_location", 1000, callback_tar_location);
     ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
 	ros::Rate rate(120);
@@ -138,12 +150,14 @@ int main(int argc, char ** argv){
 		amazing_car::my_location_msg location_msg;
 		amazing_car::my_angle_msg angle_msg;
 		amazing_car::my_gps_state state_msg;
+        amazing_car::my_node_state node_state_msg;
+
 		try{
 		    //get data
 		    //usleep(5000);
 		    std::string data;
-	            my_serial.readline(data);
-	            printf("%s", data.c_str());
+            my_serial.readline(data);
+            printf("%s", data.c_str());
 		    //decode data and update data
 		    GPGGA_Data gpgga_data;
 		    GPNTR_Data gpntr_data;
@@ -157,76 +171,95 @@ int main(int argc, char ** argv){
 		        gpntr_data = decodeGPNTR(data);
 		    }else if(data.c_str()[3] == 'G'){
 		        gpgga_data = decodeGPGGA(data);
-			state_msg.location_state = gpgga_data.state;
-			state_msg.angle_state = gpgga_data.state;
-			gps_angle_state = gpgga_data.state;
-			gps_state_pub.publish(state_msg);
-			if(gpgga_data.state != 1 && gpgga_data.state != 2 && gpgga_data.state != 4 && gpgga_data.state != 5){
-				location_msg.x = tar_location_x;
-				location_msg.y = tar_location_y;
-				printf("%d\n", gpgga_data.state);
-				location_pub.publish(location_msg);
-				continue;
-			}
-			//translate gpgga to cordinate
-			//---------------------------
-			Vec2d location = get_distance1(gpgga_data.lat,gpgga_data.lon,ori_data.lat,ori_data.lon);
-			
-			double ori_x_data = location.y;
-			double ori_y_data = -location.x;
-			float alpha = zero_angle - diff_angle < 0 ? zero_angle - diff_angle + 360 : zero_angle - diff_angle;
-			float beta = gptra_data.yaw - diff_angle < 0 ? gptra_data.yaw - diff_angle + 360 : gptra_data.yaw - diff_angle;
-			float gama = atan(-ori_y_data / ori_x_data);
-			float axis_diff = -(90 - (zero_angle - diff_angle));
-			axis_diff = axis_diff * M_PI / 180;			
 
-			location_msg.y = ori_x_data * cos(axis_diff) - ori_y_data * sin(axis_diff);
-			location_msg.x = - (ori_x_data * sin(axis_diff) + ori_y_data * cos(axis_diff));			
+                gprs_node_state.lon = gpgga_data.lon;
+                gprs_node_state.lat = gpgga_data.lat;
+                gprs_node_state.gprs_state = gpgga_data.state;
 
-			
-			//printf("%d %3f %3f\n", gpgga_data.state, location_msg.x , location_msg.y);
-			//---------------------------
-			location_pub.publish(location_msg);
-		    }else if(data.c_str()[3] == 'T'){
-		        gptra_data = decodeGPTRA(data);
-			
-			float alpha = zero_angle - diff_angle < 0 ? zero_angle - diff_angle + 360 : zero_angle - diff_angle;
-			float beta = gptra_data.yaw - diff_angle < 0 ? gptra_data.yaw - diff_angle + 360 : gptra_data.yaw - diff_angle;
+                state_msg.location_state = gpgga_data.state;
+                state_msg.angle_state = gpgga_data.state;
+                gps_angle_state = gpgga_data.state;
+                gps_state_pub.publish(state_msg);
+                if(gpgga_data.state != 1 && gpgga_data.state != 2 && gpgga_data.state != 4 && gpgga_data.state != 5){
+                    location_msg.x = tar_location_x;
+                    location_msg.y = tar_location_y;
+                    printf("%d\n", gpgga_data.state);
+                    location_pub.publish(location_msg);
+                    continue;
+                }
+                //translate gpgga to cordinate
+                //---------------------------
+                Vec2d location = get_distance1(gpgga_data.lat,gpgga_data.lon,ori_data.lat,ori_data.lon);
+                
+                double ori_x_data = location.y;
+                double ori_y_data = -location.x;
+                float alpha = zero_angle - diff_angle < 0 ? zero_angle - diff_angle + 360 : zero_angle - diff_angle;
+                float beta = gptra_data.yaw - diff_angle < 0 ? gptra_data.yaw - diff_angle + 360 : gptra_data.yaw - diff_angle;
+                float gama = atan(-ori_y_data / ori_x_data);
+                float axis_diff = -(90 - (zero_angle - diff_angle));
+                axis_diff = axis_diff * M_PI / 180;			
 
-			if(beta >= alpha){
-				angle_msg.yaw = beta - alpha;
-			}else {
-				angle_msg.yaw = 360 + beta - alpha;
-			}
-			if(!(gptra_data.yaw == 0 || gptra_data.state != 4)){
-				angle_pub.publish(angle_msg);
-			}
+                location_msg.y = ori_x_data * cos(axis_diff) - ori_y_data * sin(axis_diff);
+                location_msg.x = - (ori_x_data * sin(axis_diff) + ori_y_data * cos(axis_diff));			
 
-			//printf("%3f %d %3f\n", gptra_data.yaw, gptra_data.state, angle_msg.yaw);
-			
-		    }else if(data.c_str()[3] == 'H'){
-		        gphdt_data = decodeGPHDT(data);
+                
+                //printf("%d %3f %3f\n", gpgga_data.state, location_msg.x , location_msg.y);
+                //---------------------------
+                location_pub.publish(location_msg);
+            }else if(data.c_str()[3] == 'T'){
+                gptra_data = decodeGPTRA(data);
+                float alpha = zero_angle - diff_angle < 0 ? zero_angle - diff_angle + 360 : zero_angle - diff_angle;
+                float beta = gptra_data.yaw - diff_angle < 0 ? gptra_data.yaw - diff_angle + 360 : gptra_data.yaw - diff_angle;
+               
+                gprs_node_state.ori_angle = gptra_data.yaw;
+               
+                if(beta >= alpha){
+                    angle_msg.yaw = beta - alpha;
+                }else {
+                    angle_msg.yaw = 360 + beta - alpha;
+                }
+                if(!(gptra_data.yaw == 0 || gptra_data.state != 4)){
+                    angle_pub.publish(angle_msg);
+                }
+                //printf("%3f %d %3f\n", gptra_data.yaw, gptra_data.state, angle_msg.yaw);
+            }else if(data.c_str()[3] == 'H'){
+                gphdt_data = decodeGPHDT(data);
+                float alpha = zero_angle < 0 ? zero_angle + 360 : zero_angle;
+                float beta = gphdt_data.yaw < 0 ? gptra_data.yaw + 360 : gphdt_data.yaw;
 
-			float alpha = zero_angle < 0 ? zero_angle + 360 : zero_angle;
-			float beta = gphdt_data.yaw < 0 ? gptra_data.yaw + 360 : gphdt_data.yaw;
+                gprs_node_state.ori_angle = gphdt_data.yaw;
 
-			if(beta >= alpha){
-				angle_msg.yaw = beta - alpha - diff_angle;
-			}else {
-				angle_msg.yaw = 360 + beta - alpha - diff_angle;
-			}
-			//angle_msg.yaw += 90;
-			if(angle_msg.yaw < 0){
-				angle_msg.yaw += 360;
-			}
+                if(beta >= alpha){
+                    angle_msg.yaw = beta - alpha - diff_angle;
+                }else {
+                    angle_msg.yaw = 360 + beta - alpha - diff_angle;
+                }
+                //angle_msg.yaw += 90;
+                if(angle_msg.yaw < 0){
+                    angle_msg.yaw += 360;
+                }
 
-			if(!gphdt_data.yaw == 0){
-				angle_pub.publish(angle_msg);
-			}
-
-			//printf("%3f %d %3f\n", gptra_data.yaw, gptra_data.state, angle_msg.yaw);
-			
+                if(!gphdt_data.yaw == 0){
+                    angle_pub.publish(angle_msg);
+                }
 		    }
+
+            node_state_msg.node_name = "gprs_location_publisher";
+            node_state_msg.state = 1;
+            node_state_msg.extra_info = "";
+            ss << gprs_node_state.lon;
+            ss >> node_state_msg.extra_info;
+            node_state_msg.extra_info += " ";
+            ss << gprs_node_state.lat;
+            ss >> node_state_msg.extra_info;
+            node_state_msg.extra_info += " ";
+            ss << gprs_node_state.ori_angle;
+            ss >> node_state_msg.extra_info;
+            node_state_msg.extra_info += " ";
+            ss << gprs_node_state.gprs_state;
+            ss >> node_state_msg.extra_info;
+            ss.clear();
+            state_pub.publish(node_state_msg);
 		}catch(...){
 		    //continue;
 		}

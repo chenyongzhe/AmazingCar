@@ -5,6 +5,7 @@
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_gps_state.h"
 #include "amazing_car/my_checkpoints.h"
+#include "amazing_car/my_node_state.h"
 
 #include "geometry_msgs/Twist.h"
 #include "stdio.h"
@@ -97,6 +98,7 @@ int main(int argc, char ** argv){
 	//memset(serial_num_str, 0, 20);
 	//sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
 	//serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
+	stringstream ss;
 
 	ros::init(argc, argv, "ui_transdata");
 	ros::NodeHandle n;
@@ -105,38 +107,48 @@ int main(int argc, char ** argv){
 	ros::Subscriber car_location_sub = n.subscribe("my_car_location", 1000, callback_location);
 	ros::Subscriber gps_state_sub = n.subscribe("my_gps_state", 1000, callback_state);
 	ros::Subscriber checkpoints_sub = n.subscribe("my_checkpoints", 1000, callback_checkpoints);
+
+	ros::Publisher state_pub = n.advertise<amazing_car::my_node_state>("/my_nodes_state", 1000);
+
 	ros::Publisher tar_pub = n.advertise<amazing_car::my_location_msg>("/my_tar_location", 1000);
 	ros::Publisher car_pub = n.advertise<amazing_car::my_car_state>("/my_car_state", 1000);
-	
 	tar_pub_ptr = &tar_pub;
-
 	ros::Rate rate(20);
-
 	auto t = thread(gjm_tar_thread,0);
-	
-	int aaaa = 0;
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
 			break;
 		}
 		amazing_car::my_car_state msg;
-		
 		msg.x = car_location_x;
 		msg.y = car_location_y;
 		msg.angle = car_angle;
 		msg.state = location_state;
-		/*
-		msg.x = 20 * cos(aaaa);
-		msg.y = 20 * sin(aaaa);
-		msg.angle = 0;
-		msg.state = 4;
-		*/
 		car_pub.publish(msg);
 		printf("car: %f %f %f %f\n", msg.x, msg.y, msg.angle, msg.state);
+
+		amazing_car::my_node_state node_state_msg;
+
+		node_state_msg.node_name = "ui_transdata";
+		node_state_msg.state = 1;
+		node_state_msg.extra_info = "";
+		ss << msg.x;
+		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += " ";
+		ss << msg.y;
+		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += " ";
+		ss << msg.angle;
+		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += " ";
+		ss << msg.state;
+		ss >> node_state_msg.extra_info;
+		state_pub.publish(node_state_msg);
+		
+
 		ros::spinOnce();
 		rate.sleep();
 		//usleep(1000000);		
-		aaaa++;
 	}
 	return 0;
 }
@@ -151,9 +163,7 @@ void gjm_tar_thread(int){
 		fflush(stdout);
 		if(!tar_points.empty()){
 			printf("tar: %f %f\n",tar.x,tar.y);
-			
 			tar = tar_points.front();
-			
 			if(sqrt((tar.x - car_location_x) * (tar.x - car_location_x) + (tar.y - car_location_y) * (tar.y - car_location_y)) <= stop_distance){
 				printf("pop\n");
 				tar_points.pop();

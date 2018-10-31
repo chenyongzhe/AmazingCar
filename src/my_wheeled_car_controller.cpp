@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "amazing_car/my_server_cmd.h"
+#include "amazing_car/my_node_state.h"
 #include <iostream>
 #include <string>
 #include <stdio.h>
@@ -18,6 +19,13 @@
 #define BYTE unsigned char
 
 int shutdown_cmd = 1;
+
+struct ControllerState{
+	int speed;
+	int direction;
+}
+
+ControllerState controller_state;
 
 //int 转 4字节 BYTE[],
 void intToByte(int i, BYTE abyte[]) {
@@ -64,6 +72,9 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 		speed = 0;
 		direction = 0;
 	}
+
+	controller_state.speed = speed;
+	controller_state.direction = direction;
 }
 
 int id = 0;
@@ -102,6 +113,39 @@ void get_res(char* buffer, int buffer_size){
 	return data_size;
 }
 
+void parking(){
+	char temp_buffer[16];
+	temp_buffer[0] = 0xAA;
+	
+	temp_buffer[2] = 0x01;
+	temp_buffer[3] = 0;
+	temp_buffer[4] = 0;
+	temp_buffer[5] = 0;
+	temp_buffer[6] = 0;
+	temp_buffer[7] = 0;
+	temp_buffer[8] = 0;
+	temp_buffer[9] = 0;
+	temp_buffer[10] = 0;
+	temp_buffer[11] = 0;
+	temp_buffer[12] = 0;
+	temp_buffer[13] = 0;
+	temp_buffer[14] = 0;
+	if(id >= 255){
+		id = 0;
+	}
+	temp_buffer[15] = 0x55;
+	id++;
+	//关闭串口前 发送50条停车指令
+	for(int i = 0;i<50;i++){
+		temp_buffer[1] = id;
+		for(int i = 0;i<14;i++){
+			temp_buffer[14] += temp_buffer[i];
+		}
+		my_serial.write(buffer, 16);
+		id++;
+	}
+}
+
 int main(int argc, char ** argv){
 	std::ifstream controller_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/controller.cfg");
     int serial_num = 111;
@@ -115,11 +159,26 @@ int main(int argc, char ** argv){
 	ros::NodeHandle n;
 	ros::Subscriber sub = n.subscribe("cmd_vel", 1000, callback);
 	ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
+	ros::Publisher state_pub = n.advertise<amazing_car::my_node_state>("/my_nodes_state", 1000);
 	ros::Rate rate(20);
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
+			parking();
 			break;
 		}
+
+		amazing_car::my_node_state node_state_msg;
+		node_state_msg.node_name = "my_wheeled_car_controller";
+		node_state_msg.state = 1;
+		node_state_msg.extra_info = "";
+		ss << controller_state.speed;
+		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += " ";
+		ss << controller_state.direction;
+		ss >> node_state_msg.extra_info;
+		ss.clear();
+		state_pub.publish(node_state_msg);
+
 		get_res(buffer, 16);
 	   	my_serial.write(buffer, 16);
 		cout<<"Speed: " << speed << " Direction: " << direction << endl;

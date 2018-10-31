@@ -2,6 +2,7 @@
 #include "amazing_car/my_server_cmd.h"
 #include "amazing_car/my_checkpoints.h"
 #include "amazing_car/my_car_state.h"
+#include "amazing_car/my_node_state.h"
 
 #include <iostream>
 #include <fstream>
@@ -43,7 +44,7 @@ void gjm_data_thread(int);
 int temp_test = 0;
 
 void gjm_cmd_thread(int){
-	//get cmd		
+	//get cmd
 	while(true){
 		std::string cmd_str;
 		p_my_serial->readline(cmd_str);
@@ -66,6 +67,7 @@ int main(int argc, char ** argv){
 	ros::Publisher tars_pub = n.advertise<amazing_car::my_checkpoints>("my_checkpoints", 1000);
 	p_tars_pub = &tars_pub;
 	ros::Subscriber car_state_sub = n.subscribe("my_car_state", 1000, callback_state);
+	ros::Subscriber nodes_state = n.subscribe("my_nodes_state", 1000, callback_nodes_state);
 	ros::Rate rate(50);
 	//auth
 	system("chmod 777 /home/jlurobot/catkin_ws/src/amazing_car/shell/gnss.sh");
@@ -87,6 +89,10 @@ void callback_state(const amazing_car::my_car_state state){
 	SendCarData(state.x, state.y, state.angle, state.state);
 }
 
+void callback_state(const amazing_car::my_nodes_state state){
+	SendCarData(state.x, state.y, state.angle, state.state);
+}
+
 void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 	if(cmd.size() == 0){
 		return;
@@ -100,7 +106,6 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 	}
 
 	//#GNSS_OPEN_0$$$$$$$$$$$$$$$$$$
-
 	if(cmd.find("#GNSS_OPEN") == 0){
 		//get serial number
 		cmd = cmd.substr(cmd.find("OPEN_") + 5);

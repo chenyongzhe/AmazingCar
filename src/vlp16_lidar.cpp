@@ -12,7 +12,6 @@
 #include "ros/ros.h"
 #include "amazing_car/my_lidar_distance.h"
 
-
 #define PI 3.14159265357
 
 pcap_t * get_pcap_dev_handle(int ethernet_number) {

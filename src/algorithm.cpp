@@ -12,6 +12,7 @@
 #include "amazing_car/my_angle_msg.h"
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_lidar_distance.h"
+#include "amazing_car/my_node_state.h"
 #include "geometry_msgs/Twist.h"
 #include "pidClass.h"
 #include "stdio.h"
@@ -31,6 +32,15 @@
 //lhw
 using namespace std;
 
+struct AlgorithmState{
+	float left_speed;
+	float right_speed;
+	int stop_flag;
+};
+
+
+AlgorithmState algorithm_state;
+
 float car_angle = 0.0f;
 float car_front_location_x = 0;
 float car_front_location_y = 0;
@@ -46,7 +56,6 @@ bool stop_flag = false;
 int shutdown_cmd = 1;
 
 void callback_server(const amazing_car::my_server_cmd cmd){
-    
 	if(cmd.algorithm_cmd == 0){
        shutdown_cmd = 0;
     }
@@ -55,31 +64,26 @@ void callback_server(const amazing_car::my_server_cmd cmd){
 void scanCallbackRPLIDARA2(const sensor_msgs::LaserScan::ConstPtr& scan){
     int count = scan->scan_time / scan->time_increment;
     int min_count = 0;
-    //ROS_INFO("I heard a laser scan %s[%d]:", scan->header.frame_id.c_str(), count);
-    //ROS_INFO("angle_range, %f, %f", RAD2DEG(scan->angle_min), RAD2DEG(scan->angle_max));
     float min_range = 1.5;
     float min_degree = 1.5;
     for(int i = 0; i < count; i++) {
         float degree = RAD2DEG(scan->angle_min + scan->angle_increment * i);
-	if(degree >= -135 && degree <= 135){
-		continue;
-	}
-	if(scan->ranges[i] < 0.3){
-		continue;
-	}
-        //ROS_INFO(": [%f, %f]", degree, scan->ranges[i]);
-	if(scan->ranges[i] < min_range){
-		min_count ++;
-		//min_range = scan->ranges[i];
-		//min_degree = degree;
-	}
+		if(degree >= -135 && degree <= 135){
+			continue;
+		}
+		if(scan->ranges[i] < 0.3){
+			continue;
+		}
+		if(scan->ranges[i] < min_range){
+			min_count ++;
+		}
     }
     //printf("%f %f\n", min_degree, min_range);
     printf("%d\n", min_count);
     if(min_count >= 10){
-	stop_flag = true;
+		stop_flag = true;
     }else{
-	stop_flag = false;
+		stop_flag = false;
     }
 }
 
@@ -107,8 +111,10 @@ void scanCallbackVLP16(const sensor_msgs::PointCloud2 cloud){
 	}
 	if(min_count >= 200){
 		stop_flag = true;
+		algorithm_state.stop_flag = 1;
 	}else{
 		stop_flag = false;
+		algorithm_state.stop_flag = 0;
 	}
 
 	if(stop_flag){
@@ -160,44 +166,43 @@ void scanCallbackVlp16New(const amazing_car::my_lidar_distance lidar_distance){
 
 }
 
-
-//guojm
 void callback_angle(const amazing_car::my_angle_msg msg){
 	car_angle = msg.yaw;
 }
-//guojm
+
 void callback_front_location(const amazing_car::my_location_msg msg){
 	car_front_location_x = msg.x;
 	car_front_location_y = msg.y;
 }
+
 void callback_rear_location(const amazing_car::my_location_msg msg){
 	car_rear_location_x = msg.x;
 	car_rear_location_y = msg.y;
 }
 
-//guojm
 void callback_tar_location(const amazing_car::my_location_msg msg){
 	tar_location_x = msg.x;
 	tar_location_y = msg.y;
 }
-//guojm
+
 geometry_msgs::Twist algorithm(float car_angle, float car_front_location_x, float car_front_location_y, float car_rear_location_x, float car_rear_location_y, float tar_location_x, float tar_loaction_y, int stop_distance){
 	geometry_msgs::Twist cmd;
 	/////////////////////////////////////////
 	magicPoint frontPoint(car_front_location_x, car_front_location_y);
 	magicPoint rearPoint(car_rear_location_x, car_rear_location_y);
 	magicPoint tarPoint(tar_location_x, tar_loaction_y);
-	
-
-    	wheelSpeed result = pidClass::simpleAlgorithm(frontPoint, tarPoint, car_angle, stop_distance);
+	wheelSpeed result = pidClass::simpleAlgorithm(frontPoint, tarPoint, car_angle, stop_distance);
 	//wheelSpeed result = pidClass::traverse(frontPoint, car_angle, stop_distance);
-
 	//printf("speed %f %f\n", result.left, result.right);
 	cmd.linear.x = result.left;
 	cmd.linear.y = result.right;
+	////////////////////
+	algorithm_state.left_speed = result.left;
+	algorithm_state.right_speed = result.right;
 	/////////////////////////////////////////
 	return cmd;
 }
+
 
 int main(int argc, char ** argv){
 	ros::init(argc, argv, "algorithm");
@@ -210,20 +215,36 @@ int main(int argc, char ** argv){
 	ros::Subscriber server_cmd_sub = n.subscribe("server_cmd", 1000, callback_server);
 	ros::Subscriber tar_location_sub = n.subscribe("my_tar_location", 1000, callback_tar_location);
 	ros::Publisher cmd_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 1000);
+
+	ros::Publisher state_pub = n.advertise<amazing_car::my_node_state>("/my_nodes_state", 1000);
+
+	stringstream ss;
+
 	ros::Rate rate(80);
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
 			break;
 		}
+
+		amazing_car::my_node_state node_state_msg;
+		node_state_msg.node_name = "algorithm";
+		node_state_msg.state = 1;
+		node_state_msg.extra_info = "";
+		ss << algorithm_state.left_speed;
+		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += " ";
+		ss << algorithm_state.right_speed;
+		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += " ";
+		ss << algorithm_state.stop_flag;
+		ss >> node_state_msg.extra_info;
+		ss.clear();
+		state_pub.publish(node_state_msg);
+
 		if(!stop_flag){
-			//printf("1\n");
-			//printf("Angle:%f L_X:%f L_Y:%f T_X:%f T_Y:%f\n", car_angle, car_front_location_x, car_front_location_y, pathToTraverse.front().x, pathToTraverse.front().y);
-			//printf("Angle:%f L_X:%f L_Y:%f T_X:%f T_Y:%f\n", car_angle, car_front_location_x, car_front_location_y, tar_location_x, tar_location_y);
 			geometry_msgs::Twist cmd = algorithm(car_angle, car_front_location_x, car_front_location_y, car_rear_location_x, car_rear_location_y, tar_location_x, tar_location_y, 1);
-		        //printf("cmd_l:%f cmd_r:%f\n", cmd.linear.x, cmd.linear.y);
 			cmd_pub.publish(cmd);
 		}else{
-			//printf("2\n");
 			geometry_msgs::Twist cmd;
 			cmd.linear.x = 200;
 			cmd.linear.y = 200;

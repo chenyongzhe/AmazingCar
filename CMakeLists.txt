@@ -24,6 +24,7 @@ add_message_files(
     my_server_cmd.msg
     my_checkpoints.msg
     my_car_state.msg
+    my_node_state.msg
 )
 
 generate_messages(
