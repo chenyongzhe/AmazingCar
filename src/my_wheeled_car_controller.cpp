@@ -169,14 +169,13 @@ int main(int argc, char ** argv){
 
 		amazing_car::my_node_state node_state_msg;
 		node_state_msg.node_name = "my_wheeled_car_controller";
-		node_state_msg.state = 1;
+		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
-		ss << controller_state.speed;
-		ss >> node_state_msg.extra_info;
+		
+		node_state_msg.extra_info += to_string(controller_state.speed;;
 		node_state_msg.extra_info += " ";
-		ss << controller_state.direction;
-		ss >> node_state_msg.extra_info;
-		ss.clear();
+		node_state_msg.extra_info += to_string(controller_state.direction;);
+
 		state_pub.publish(node_state_msg);
 
 		get_res(buffer, 16);

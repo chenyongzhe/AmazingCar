@@ -7,6 +7,7 @@
 
 #include "stdio.h"
 #include <fstream>
+#include <string>
 
 // OS Specific sleep
 #ifdef _WIN32
@@ -18,8 +19,8 @@
 #include "serial/serial.h"
 #include <math.h>
 
+using namespace std;
 using std::string;
-
 int gps_angle_state = 0;
 
 float zero_angle = 246.38;
@@ -87,7 +88,7 @@ struct GprsState{
     float lon;
     float lat;
     float ori_angle;
-    float gps_state;
+    float gprs_state;
 };
 
 void callback_tar_location(const amazing_car::my_location_msg msg){
@@ -128,7 +129,6 @@ int main(int argc, char ** argv){
     memset(serial_num_str, 0, 20);
     sprintf(serial_num_str, "/dev/ttyS%d", serial_num);
     serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
-    stringstream ss;
 
 	ros::init(argc, argv, "gprs_location_publisher");
 	ros::NodeHandle n;
@@ -245,20 +245,16 @@ int main(int argc, char ** argv){
 		    }
 
             node_state_msg.node_name = "gprs_location_publisher";
-            node_state_msg.state = 1;
-            ss << gprs_node_state.lon;
-            ss >> node_state_msg.extra_info;
+            node_state_msg.node_state = 1;
+            node_state_msg.extra_info += to_string(gprs_node_state.lon);
             node_state_msg.extra_info += " ";
-            ss << gprs_node_state.lat;
-            ss >> node_state_msg.extra_info;
+            node_state_msg.extra_info += to_string(gprs_node_state.lat);
             node_state_msg.extra_info += " ";
-            ss << gprs_node_state.ori_angle;
-            ss >> node_state_msg.extra_info;
+            node_state_msg.extra_info += to_string(gprs_node_state.ori_angle);
             node_state_msg.extra_info += " ";
-            ss << gprs_node_state.gprs_state;
-            ss >> node_state_msg.extra_info;
-            ss.clear();
-            state_pub.publish();
+            node_state_msg.extra_info += to_string(gprs_node_state.gprs_state);
+
+            state_pub.publish(node_state_msg);
 		}catch(...){
 		    //continue;
 		}

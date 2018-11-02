@@ -8,7 +8,7 @@
 #include <pcl_ros/transforms.h>
 
 #include <math.h>
-
+#include <string>
 #include "amazing_car/my_angle_msg.h"
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_lidar_distance.h"
@@ -218,8 +218,6 @@ int main(int argc, char ** argv){
 
 	ros::Publisher state_pub = n.advertise<amazing_car::my_node_state>("/my_nodes_state", 1000);
 
-	stringstream ss;
-
 	ros::Rate rate(80);
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
@@ -230,15 +228,13 @@ int main(int argc, char ** argv){
 		node_state_msg.node_name = "algorithm";
 		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
-		ss << algorithm_state.left_speed;
-		ss >> node_state_msg.extra_info;
+
+		node_state_msg.extra_info += to_string(algorithm_state.left_speed);
 		node_state_msg.extra_info += " ";
-		ss << algorithm_state.right_speed;
-		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += to_string(algorithm_state.right_speed);
 		node_state_msg.extra_info += " ";
-		ss << algorithm_state.stop_flag;
-		ss >> node_state_msg.extra_info;
-		ss.clear();
+		node_state_msg.extra_info += to_string(algorithm_state.stop_flag);
+
 		state_pub.publish(node_state_msg);
 
 		if(!stop_flag){

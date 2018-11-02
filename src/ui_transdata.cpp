@@ -21,6 +21,7 @@
 #include <vector>
 #include <math.h>
 #include <mutex>
+#include <string>
 
 struct CarData{
 	float x,y,angle;
@@ -132,17 +133,15 @@ int main(int argc, char ** argv){
 		node_state_msg.node_name = "ui_transdata";
 		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
-		ss << msg.x;
-		ss >> node_state_msg.extra_info;
+
+		node_state_msg.extra_info += to_string(msg.x);
 		node_state_msg.extra_info += " ";
-		ss << msg.y;
-		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += to_string(msg.y);
 		node_state_msg.extra_info += " ";
-		ss << msg.angle;
-		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += to_string(msg.angle);
 		node_state_msg.extra_info += " ";
-		ss << msg.state;
-		ss >> node_state_msg.extra_info;
+		node_state_msg.extra_info += to_string(msg.state);
+
 		state_pub.publish(node_state_msg);
 		
 
