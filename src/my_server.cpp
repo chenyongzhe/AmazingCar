@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include "serial/serial.h"
 #include <thread>
-
+#include <pthread.h>
 
 using namespace std;
 
@@ -92,7 +92,7 @@ int main(int argc, char ** argv){
 	p_cmd_pub = &cmd_pub;
 	ros::Publisher tars_pub = n.advertise<amazing_car::my_checkpoints>("my_checkpoints", 1000);
 	p_tars_pub = &tars_pub;
-	ros::Subscriber car_state_sub = n.subscribe("my_car_state", 1000, callback_state);
+	//ros::Subscriber car_state_sub = n.subscribe("my_car_state", 1000, callback_state);
 	ros::Subscriber nodes_state = n.subscribe("my_nodes_state", 1000, callback_nodes_state);
 	ros::Rate rate(50);
 	//auth
@@ -105,15 +105,39 @@ int main(int argc, char ** argv){
 	//main circle
 	while(ros::ok()){
 		//circle
+		excute_cmd();
 		ros::spinOnce();
 		rate.sleep();
 	}
 	return 0;
 }
 
-void callback_state(const amazing_car::my_car_state state){
-	//expired
-	//SendCarData(state.x, state.y, state.angle, state.state);
+// void callback_state(const amazing_car::my_car_state state){
+// 	//expired
+// 	//SendCarData(state.x, state.y, state.angle, state.state);
+// }
+
+queue<string> cmd_queue;
+pthread_mutex_t mutex;
+
+inline void add_to_cmd_queue(const string& cmd){
+	if (pthread_mutex_lock(&mutex) != 0){
+        fprintf(stdout, "lock error!\n");
+    }
+	cmd_queue.push(cmd);
+	pthread_mutex_unlock(&mutex);
+}
+
+inline void excute_cmd(){
+	if (pthread_mutex_lock(&mutex) != 0){
+		fprintf(stdout, "lock error!\n");
+	}
+	string cmd;
+	while(!cmd_queue.empty()){
+		cmd = cmd_queue.front();
+		cmd_queue.pop();
+		p_my_serial->write(cmd);
+	}
 }
 
 void callback_nodes_state(const amazing_car::my_node_state state){
@@ -136,7 +160,8 @@ void callback_nodes_state(const amazing_car::my_node_state state){
 			}
 		}
 		std::string res = t;
-		p_my_serial->write(res);
+		add_to_cmd_queue(res);
+		//p_my_serial->write(res);
 
 	}else if(state.node_name == "algorithm"){
 		string s = state.extra_info;
@@ -156,7 +181,8 @@ void callback_nodes_state(const amazing_car::my_node_state state){
 			}
 		}
 		std::string res = t;
-		p_my_serial->write(res);
+		add_to_cmd_queue(res);
+		//p_my_serial->write(res);
 
 	}else if(state.node_name == "my_wheeled_car_controller"){
 		string s = state.extra_info;
@@ -175,7 +201,8 @@ void callback_nodes_state(const amazing_car::my_node_state state){
 			}
 		}
 		std::string res = t;
-		p_my_serial->write(res);
+		add_to_cmd_queue(res);
+		//p_my_serial->write(res);
 
 	}else if(state.node_name == "ui_transdata"){
 		string s = state.extra_info;
@@ -197,7 +224,8 @@ void callback_nodes_state(const amazing_car::my_node_state state){
 			}
 		}
 		std::string res = t;
-		p_my_serial->write(res);
+		add_to_cmd_queue(res);
+		//p_my_serial->write(res);
 	}
 
 
