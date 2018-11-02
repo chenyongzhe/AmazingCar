@@ -45,6 +45,28 @@ void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd);
 
 void gjm_data_thread(int);
 
+queue<string> cmd_queue;
+pthread_mutex_t mutex;
+inline void add_to_cmd_queue(const string& cmd){
+	if (pthread_mutex_lock(&mutex) != 0){
+        fprintf(stdout, "lock error!\n");
+    }
+	cmd_queue.push(cmd);
+	pthread_mutex_unlock(&mutex);
+}
+
+inline void excute_cmd(){
+	if (pthread_mutex_lock(&mutex) != 0){
+		fprintf(stdout, "lock error!\n");
+	}
+	string cmd;
+	while(!cmd_queue.empty()){
+		cmd = cmd_queue.front();
+		cmd_queue.pop();
+		p_my_serial->write(cmd);
+	}
+}
+
 
 int temp_test = 0;
 
@@ -83,7 +105,7 @@ int main(int argc, char ** argv){
 	char temp[50];
 	memset(temp, 0, 50);
 	int serial_number = atoi(argv[1]);
-	sprintf(temp, "/dev/ttyS%d", serial_number);
+	sprintf(temp, "/dev/ttyUSB%d", serial_number);
 	serial::Serial my_serial(temp, 115200, serial::Timeout::simpleTimeout(1000));
 	p_my_serial = &my_serial;
 	ros::init(argc, argv, "my_server");
@@ -117,28 +139,8 @@ int main(int argc, char ** argv){
 // 	//SendCarData(state.x, state.y, state.angle, state.state);
 // }
 
-queue<string> cmd_queue;
-pthread_mutex_t mutex;
 
-inline void add_to_cmd_queue(const string& cmd){
-	if (pthread_mutex_lock(&mutex) != 0){
-        fprintf(stdout, "lock error!\n");
-    }
-	cmd_queue.push(cmd);
-	pthread_mutex_unlock(&mutex);
-}
 
-inline void excute_cmd(){
-	if (pthread_mutex_lock(&mutex) != 0){
-		fprintf(stdout, "lock error!\n");
-	}
-	string cmd;
-	while(!cmd_queue.empty()){
-		cmd = cmd_queue.front();
-		cmd_queue.pop();
-		p_my_serial->write(cmd);
-	}
-}
 
 void callback_nodes_state(const amazing_car::my_node_state state){
 	if(state.node_name == "gprs_location_publisher"){
