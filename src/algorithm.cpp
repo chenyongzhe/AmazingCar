@@ -218,7 +218,10 @@ int main(int argc, char ** argv){
 
 	ros::Publisher state_pub = n.advertise<amazing_car::my_node_state>("/my_nodes_state", 1000);
 
-	ros::Rate rate(80);
+	ros::Rate rate(20);
+
+	int temp = 0;
+
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
 			break;
@@ -228,8 +231,8 @@ int main(int argc, char ** argv){
 		node_state_msg.node_name = "algorithm";
 		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
-
-		node_state_msg.extra_info += to_string(algorithm_state.left_speed);
+		temp++;
+		node_state_msg.extra_info += to_string(algorithm_state.left_speed + temp);
 		node_state_msg.extra_info += " ";
 		node_state_msg.extra_info += to_string(algorithm_state.right_speed);
 		node_state_msg.extra_info += " ";

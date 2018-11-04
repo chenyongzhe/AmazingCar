@@ -120,7 +120,7 @@ int main(int argc, char ** argv){
 	ros::Publisher tar_pub = n.advertise<amazing_car::my_location_msg>("/my_tar_location", 1000);
 	//ros::Publisher car_pub = n.advertise<amazing_car::my_car_state>("/my_car_state", 1000);
 	tar_pub_ptr = &tar_pub;
-	ros::Rate rate(20);
+	ros::Rate rate(80);
 	auto t = thread(gjm_tar_thread,0);
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
