@@ -90,6 +90,9 @@ void callback_state(const amazing_car::my_gps_state msg){
 	location_state = msg.location_state;
 }
 
+
+float temp;
+
 int main(int argc, char ** argv){
 
 	//std::ifstream data_cfg("/home/jlurobot/catkin_ws/src/amazing_car/config/data_transer.cfg");
@@ -100,6 +103,9 @@ int main(int argc, char ** argv){
 	//sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
 	//serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
 	stringstream ss;
+
+	////
+	temp = 0;
 
 	ros::init(argc, argv, "ui_transdata");
 	ros::NodeHandle n;
@@ -134,13 +140,16 @@ int main(int argc, char ** argv){
 		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
 
-		node_state_msg.extra_info += to_string(msg.x);
+		node_state_msg.extra_info += to_string(msg.x + 20 * cos(temp));
 		node_state_msg.extra_info += " ";
-		node_state_msg.extra_info += to_string(msg.y);
+		node_state_msg.extra_info += to_string(msg.y + 20 * sin(temp));
 		node_state_msg.extra_info += " ";
 		node_state_msg.extra_info += to_string(msg.angle);
 		node_state_msg.extra_info += " ";
 		node_state_msg.extra_info += to_string(msg.state);
+		
+		//
+		temp += 0.01;
 
 		state_pub.publish(node_state_msg);
 		

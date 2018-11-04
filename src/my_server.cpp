@@ -65,8 +65,9 @@ inline void excute_cmd(){
 		cmd = cmd_queue.front();
 		cmd_queue.pop();
 		p_my_serial->write(cmd);
-		//printf("SENDCMD:%s\n", cmd);
+		
 	}
+	//printf("CMD_QUEUE_SIZE:%d\n", cmd_queue.size());
 	pthread_mutex_unlock(&mutex);
 
 }
