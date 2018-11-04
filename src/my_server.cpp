@@ -52,6 +52,7 @@ inline void add_to_cmd_queue(const string& cmd){
         fprintf(stdout, "lock error!\n");
     }
 	cmd_queue.push(cmd);
+	//printf("ADDCMD:%s\n", cmd);
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -64,7 +65,10 @@ inline void excute_cmd(){
 		cmd = cmd_queue.front();
 		cmd_queue.pop();
 		p_my_serial->write(cmd);
+		//printf("SENDCMD:%s\n", cmd);
 	}
+	pthread_mutex_unlock(&mutex);
+
 }
 
 
@@ -143,6 +147,7 @@ int main(int argc, char ** argv){
 
 
 void callback_nodes_state(const amazing_car::my_node_state state){
+	//printf("RECV %s STATE\n", state.node_name);
 	if(state.node_name == "gprs_location_publisher"){
 		string s = state.extra_info;
 		vector<string> attrs = split(s, ' ');
@@ -229,7 +234,6 @@ void callback_nodes_state(const amazing_car::my_node_state state){
 		add_to_cmd_queue(res);
 		//p_my_serial->write(res);
 	}
-
 
 }
 
