@@ -4,6 +4,8 @@
 #include "amazing_car/my_car_state.h"
 #include "amazing_car/my_node_state.h"
 
+#include "std_msgs/Bool.h"
+
 #include <iostream>
 #include <fstream>
 #include <queue>
@@ -34,7 +36,7 @@ ros::Publisher * p_tars_pub = nullptr;
 vector<CYCarPoint> tars;
 serial::Serial * p_my_serial = nullptr;
 ros::Publisher * p_cmd_pub = nullptr;
-
+ros::Publisher * p_shutdown_pub = nullptr;
 
 void callback_state(const amazing_car::my_car_state state);
 void callback_nodes_state(const amazing_car::my_node_state state);
@@ -46,7 +48,9 @@ void add_tar_to_queue(vector<CYCarPoint> & tar_vector, string cmd);
 void gjm_data_thread(int);
 
 queue<string> cmd_queue;
+
 pthread_mutex_t mutex;
+
 inline void add_to_cmd_queue(const string& cmd){
 	if (pthread_mutex_lock(&mutex) != 0){
         fprintf(stdout, "lock error!\n");
@@ -57,19 +61,21 @@ inline void add_to_cmd_queue(const string& cmd){
 }
 
 inline void excute_cmd(){
+	string cmd;
+	////
 	if (pthread_mutex_lock(&mutex) != 0){
 		fprintf(stdout, "lock error!\n");
 	}
-	string cmd;
+	cmd = "";
 	while(!cmd_queue.empty()){
 		cmd = cmd_queue.front();
 		cmd_queue.pop();
 		p_my_serial->write(cmd);
+
+		//printf("%s\n", cmd.c_str());
 		
 	}
-	//printf("CMD_QUEUE_SIZE:%d\n", cmd_queue.size());
 	pthread_mutex_unlock(&mutex);
-
 }
 
 
@@ -118,6 +124,11 @@ int main(int argc, char ** argv){
 	ros::Publisher cmd_pub = n.advertise<amazing_car::my_server_cmd>("server_cmd", 1000);
 	p_cmd_pub = &cmd_pub;
 	ros::Publisher tars_pub = n.advertise<amazing_car::my_checkpoints>("my_checkpoints", 1000);
+
+	ros::Publisher shutdown_pub = n.advertise<std_msgs::Bool>("my_shutdown_flag", 1000);
+	p_shutdown_pub = &shutdown_pub;
+
+
 	p_tars_pub = &tars_pub;
 	//ros::Subscriber car_state_sub = n.subscribe("my_car_state", 1000, callback_state);
 	ros::Subscriber nodes_state = n.subscribe("my_nodes_state", 1000, callback_nodes_state);
@@ -138,14 +149,6 @@ int main(int argc, char ** argv){
 	}
 	return 0;
 }
-
-// void callback_state(const amazing_car::my_car_state state){
-// 	//expired
-// 	//SendCarData(state.x, state.y, state.angle, state.state);
-// }
-
-
-
 
 void callback_nodes_state(const amazing_car::my_node_state state){
 	//printf("RECV %s STATE\n", state.node_name);
@@ -273,6 +276,22 @@ void process_cmd(const ros::Publisher & cmd_pub, string cmd){
 		gnss_cfg_file << serial_num;
 		//start service
 		system("gnome-terminal -e /home/jlurobot/catkin_ws/src/amazing_car/shell/controller.sh");
+	}
+
+	if(cmd.find("#CONTROLLER_SHUTDOWN_ON") == 0){
+		std_msgs::Bool bool_msg;
+		bool_msg.data = true;
+		for(int i = 0;i<10;i++){
+			p_shutdown_pub->publish(bool_msg);
+		}
+	}
+
+	if(cmd.find("#CONTROLLER_SHUTDOWN_OFF") == 0){
+		std_msgs::Bool bool_msg;
+		bool_msg.data = false;
+		for(int i = 0;i<10;i++){
+			p_shutdown_pub->publish(bool_msg);
+		}
 	}
 	
 	if(cmd.find("#ALGORITHM_OPEN") == 0){

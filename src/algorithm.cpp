@@ -13,6 +13,9 @@
 #include "amazing_car/my_location_msg.h"
 #include "amazing_car/my_lidar_distance.h"
 #include "amazing_car/my_node_state.h"
+
+#include "std_msgs/Bool.h"
+
 #include "geometry_msgs/Twist.h"
 #include "pidClass.h"
 #include "stdio.h"
@@ -166,6 +169,12 @@ void scanCallbackVlp16New(const amazing_car::my_lidar_distance lidar_distance){
 
 }
 
+bool shutdown_flag = false;
+
+void callback_shutdown_flag(const std_msgs::Bool msg){
+	shutdown_flag = msg.data;
+}
+
 void callback_angle(const amazing_car::my_angle_msg msg){
 	car_angle = msg.yaw;
 }
@@ -193,7 +202,12 @@ geometry_msgs::Twist algorithm(float car_angle, float car_front_location_x, floa
 	magicPoint tarPoint(tar_location_x, tar_loaction_y);
 	wheelSpeed result = pidClass::simpleAlgorithm(frontPoint, tarPoint, car_angle, stop_distance);
 	//wheelSpeed result = pidClass::traverse(frontPoint, car_angle, stop_distance);
-	//printf("speed %f %f\n", result.left, result.right);
+
+	if(shutdown_flag){
+		result.left = 200;
+		result.right = 200;
+	}
+	printf("speed %f %f\n", result.left, result.right);
 	cmd.linear.x = result.left;
 	cmd.linear.y = result.right;
 	////////////////////
@@ -208,6 +222,9 @@ int main(int argc, char ** argv){
 	ros::init(argc, argv, "algorithm");
 	ros::NodeHandle n;
 	ros::Subscriber car_angle_sub = n.subscribe("my_car_angle", 1000, callback_angle);
+
+	ros::Subscriber shutdown_sub = n.subscribe("my_shutdown_flag", 1000, callback_shutdown_flag);
+
 	ros::Subscriber car_front_location_sub = n.subscribe("my_car_location", 1000, callback_front_location);
 	//ros::Subscriber sub1 = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, scanCallbackRPLIDARA2);
 	ros::Subscriber sub2 = n.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1000, scanCallbackVLP16);
@@ -220,8 +237,6 @@ int main(int argc, char ** argv){
 
 	ros::Rate rate(20);
 
-	int temp = 0;
-
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
 			break;
@@ -231,8 +246,7 @@ int main(int argc, char ** argv){
 		node_state_msg.node_name = "algorithm";
 		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
-		temp++;
-		node_state_msg.extra_info += to_string(algorithm_state.left_speed + temp);
+		node_state_msg.extra_info += to_string(algorithm_state.left_speed);
 		node_state_msg.extra_info += " ";
 		node_state_msg.extra_info += to_string(algorithm_state.right_speed);
 		node_state_msg.extra_info += " ";
