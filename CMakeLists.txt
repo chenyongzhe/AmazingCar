@@ -100,14 +100,7 @@ add_executable(serial_subscriber examples/serial_subscriber.cpp)
 add_executable(serial_example examples/serial_example.cc)
 
 #add_executable(my_tar_location_publisher src/my_tar_location_publisher.cpp)
-add_executable(algorithm src/algorithm.cpp)
-add_executable(gprs_location_publisher src/gprs_location_publisher.cpp)
-add_executable(my_big_car_controller src/my_big_car_controller.cpp)
-add_executable(ui_transdata src/ui_transdata.cpp)
-add_executable(gyroscope src/gyroscope.cpp)
-add_executable(beixing_lidar src/beixing_lidar.cpp)
-add_executable(vlp16_lidar src/vlp16_lidar.cpp)
-add_executable(my_server src/my_server.cpp)
+
 
 
 add_dependencies(serial_example ${PROJECT_NAME})
@@ -128,6 +121,16 @@ target_link_libraries(joy_subscriber
   ${catkin_LIBRARIES}
 )
 
+
+add_executable(algorithm src/algorithm.cpp)
+add_executable(gprs_location_publisher src/gprs_location_publisher.cpp)
+add_executable(my_big_car_controller src/my_big_car_controller.cpp)
+add_executable(my_wheeled_car_controller src/my_wheeled_car_controller.cpp)
+add_executable(ui_transdata src/ui_transdata.cpp)
+add_executable(gyroscope src/gyroscope.cpp)
+add_executable(beixing_lidar src/beixing_lidar.cpp)
+add_executable(vlp16_lidar src/vlp16_lidar.cpp)
+add_executable(my_server src/my_server.cpp)
 
 add_dependencies(gyroscope ${PROJECT_NAME})
 target_link_libraries(gyroscope ${PROJECT_NAME})
@@ -152,6 +155,13 @@ target_link_libraries(my_big_car_controller ${PROJECT_NAME})
 target_link_libraries(my_big_car_controller
   ${catkin_LIBRARIES}
 )
+
+add_dependencies(my_wheeled_car_controller ${PROJECT_NAME})
+target_link_libraries(my_wheeled_car_controller ${PROJECT_NAME})
+target_link_libraries(my_wheeled_car_controller
+  ${catkin_LIBRARIES}
+)
+
 
 add_dependencies(ui_transdata ${PROJECT_NAME})
 target_link_libraries(ui_transdata ${PROJECT_NAME})

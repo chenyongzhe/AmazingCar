@@ -1,2 +1,2 @@
 #!/bin/bash
-rosrun amazing_car my_big_car_controller
+rosrun amazing_car my_wheeled_car_controller

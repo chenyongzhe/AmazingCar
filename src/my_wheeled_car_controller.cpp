@@ -18,12 +18,14 @@
 
 #define BYTE unsigned char
 
+using namespace std;
+
 int shutdown_cmd = 1;
 
 struct ControllerState{
 	int speed;
 	int direction;
-}
+};
 
 ControllerState controller_state;
 
@@ -60,13 +62,13 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 	float left = cmd_vel.linear.x;
 	float right = cmd_vel.linear.y;
 	if(left == 50 && right == 350){
-		speed = 20;
+		speed = 300;
 		direction = 314;
 	}else if(left == 350 && right == 50){
-		speed = 20;
+		speed = 300;
 		direction = -314;
 	}else if(left == 350 && right == 350){
-		speed = 30;
+		speed = 300;
 		direction = 0;
 	}else{  
 		speed = 0;
@@ -78,9 +80,9 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 }
 
 int id = 0;
-BYTE temp = new BYTE[4];
+BYTE * temp = new BYTE[4];
 
-void get_res(char* buffer, int buffer_size){
+void get_res(uint8_t* buffer, int buffer_size){
 	int data_size = 0;
 	if(buffer_size < 16){
 		cout<<"The buffer doesn't have enough space\n"<<endl;
@@ -110,7 +112,7 @@ void get_res(char* buffer, int buffer_size){
 	}
 	buffer[15] = 0x55;
 	id++;
-	return data_size;
+	return;
 }
 
 void parking(){
@@ -141,7 +143,7 @@ void parking(){
 		for(int i = 0;i<14;i++){
 			temp_buffer[14] += temp_buffer[i];
 		}
-		my_serial.write(buffer, 16);
+		//my_serial.write(buffer, 16);
 		id++;
 	}
 }
@@ -154,7 +156,7 @@ int main(int argc, char ** argv){
     memset(serial_num_str, 0, 20);
     sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
     serial::Serial my_serial(serial_num_str, 57600, serial::Timeout::simpleTimeout(1000));
-	char buffer = new char[16];
+	uint8_t* buffer = new uint8_t[16];
 	ros::init(argc, argv, "my_wheeled_car_controller");
 	ros::NodeHandle n;
 	ros::Subscriber sub = n.subscribe("cmd_vel", 1000, callback);
@@ -172,15 +174,20 @@ int main(int argc, char ** argv){
 		node_state_msg.node_state = 1;
 		node_state_msg.extra_info = "";
 		
-		node_state_msg.extra_info += to_string(controller_state.speed;;
+		node_state_msg.extra_info += to_string(controller_state.speed);
 		node_state_msg.extra_info += " ";
-		node_state_msg.extra_info += to_string(controller_state.direction;);
+		node_state_msg.extra_info += to_string(controller_state.direction);
 
 		state_pub.publish(node_state_msg);
 
 		get_res(buffer, 16);
+		for(int i = 0;i<16;i++){
+			printf("%d ", buffer[i]);
+		}
+		printf("\n");
+		
 	   	my_serial.write(buffer, 16);
-		cout<<"Speed: " << speed << " Direction: " << direction << endl;
+		//cout<<"Speed: " << speed << " Direction: " << direction << endl;
 		usleep(40000);
 		ros::spinOnce();
 	}
