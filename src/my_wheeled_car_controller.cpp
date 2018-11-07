@@ -60,6 +60,9 @@ int direction = 0; //0.001rad
 void callback(const geometry_msgs::Twist& cmd_vel){
 	float left = cmd_vel.linear.x;
 	float right = cmd_vel.linear.y;
+	float beta = cmd_vel.linear.z;
+	
+
 	if(left == 50 && right == 350){
 		speed = 300;
 		direction = 314;
@@ -68,7 +71,12 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 		direction = -314;
 	}else if(left == 350 && right == 350){
 		speed = 300;
-		direction = 0;
+		while(beta > 180){
+			beta -= 360;
+		}
+		beta = beta * -1 * 3.1415926 * 1000 / 180;
+		
+		direction = beta;
 	}else{  
 		speed = 0;
 		direction = 0;
