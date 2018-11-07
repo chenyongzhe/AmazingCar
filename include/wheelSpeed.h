@@ -18,6 +18,7 @@ struct wheelSpeed
 	void changeWheelSpeed(float u);
 	float left;
 	float right;
+	float beta;
 };
 
 void fit(float &sp) {

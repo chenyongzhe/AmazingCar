@@ -38,6 +38,7 @@ using namespace std;
 struct AlgorithmState{
 	float left_speed;
 	float right_speed;
+	float beta;
 	int stop_flag;
 };
 
@@ -210,9 +211,11 @@ geometry_msgs::Twist algorithm(float car_angle, float car_front_location_x, floa
 	printf("speed %f %f\n", result.left, result.right);
 	cmd.linear.x = result.left;
 	cmd.linear.y = result.right;
+	cmd.linear.z = result.beta;
 	////////////////////
 	algorithm_state.left_speed = result.left;
 	algorithm_state.right_speed = result.right;
+	algorithm_state.beta = result.beta;
 	/////////////////////////////////////////
 	return cmd;
 }
@@ -250,6 +253,8 @@ int main(int argc, char ** argv){
 		node_state_msg.extra_info += " ";
 		node_state_msg.extra_info += to_string(algorithm_state.right_speed);
 		node_state_msg.extra_info += " ";
+		node_state_msg.extra_info += to_string(algorithm_state.beta);
+		node_state_msg.extra_info += " ";
 		node_state_msg.extra_info += to_string(algorithm_state.stop_flag);
 
 		state_pub.publish(node_state_msg);
@@ -261,7 +266,7 @@ int main(int argc, char ** argv){
 			geometry_msgs::Twist cmd;
 			cmd.linear.x = 200;
 			cmd.linear.y = 200;
-			cmd.linear.z = 200;
+			cmd.linear.z = 0;
 			cmd_pub.publish(cmd);
 		}
 		

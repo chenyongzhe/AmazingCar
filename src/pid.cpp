@@ -108,6 +108,7 @@ wheelSpeed pidClass::simpleAlgorithm(magicPoint carPoint, magicPoint targetPoint
 	wheelSpeed speed;
 	speed.left = 200;
 	speed.right = 200;
+	speed.beta = beta;
 	if (carToTarget.vectorLength <= stopDistance){
 		speed.left = 200;
 		speed.right = 200;
@@ -161,9 +162,7 @@ wheelSpeed pidClass::simpleAlgorithm(magicPoint carPoint, magicPoint targetPoint
 		speed.right = 350;
 		return speed;
 	}
-
 	return speed;
-
 }
 
 wheelSpeed pidClass::traverse(
