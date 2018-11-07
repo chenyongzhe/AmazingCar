@@ -49,9 +49,8 @@ int bytesToInt(BYTE bytes[]) {
 
 
 void callback_server(const amazing_car::my_server_cmd cmd){
-    if(cmd.controller_cmd == 0){
-        shutdown_cmd = 0;
-    }
+    //if( == 0){
+    shutdown_cmd = cmd.controller_cmd;
 }
 
 int speed = 0; //0.01m/s 
@@ -115,6 +114,8 @@ void get_res(uint8_t* buffer, int buffer_size){
 	return;
 }
 
+serial::Serial * p_my_serial;
+
 void parking(){
 	char temp_buffer[16];
 	temp_buffer[0] = 0xAA;
@@ -155,7 +156,8 @@ int main(int argc, char ** argv){
     char serial_num_str[20];
     memset(serial_num_str, 0, 20);
     sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
-    serial::Serial my_serial(serial_num_str, 57600, serial::Timeout::simpleTimeout(1000));
+    serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
+	p_my_serial = &my_serial;
 	uint8_t* buffer = new uint8_t[16];
 	ros::init(argc, argv, "my_wheeled_car_controller");
 	ros::NodeHandle n;
@@ -166,30 +168,24 @@ int main(int argc, char ** argv){
 	while(ros::ok()){
 		if(shutdown_cmd == 0){
 			parking();
-			break;
+			//break;
+		}else{
+			amazing_car::my_node_state node_state_msg;
+			node_state_msg.node_name = "my_wheeled_car_controller";
+			node_state_msg.node_state = 1;
+			node_state_msg.extra_info = "";
+			
+			node_state_msg.extra_info += to_string(controller_state.speed);
+			node_state_msg.extra_info += " ";
+			node_state_msg.extra_info += to_string(controller_state.direction);
+
+			state_pub.publish(node_state_msg);
+			get_res(buffer, 16);
+			my_serial.write(buffer, 16);
+			//cout<<"Speed: " << speed << " Direction: " << direction << endl;
 		}
-
-		amazing_car::my_node_state node_state_msg;
-		node_state_msg.node_name = "my_wheeled_car_controller";
-		node_state_msg.node_state = 1;
-		node_state_msg.extra_info = "";
-		
-		node_state_msg.extra_info += to_string(controller_state.speed);
-		node_state_msg.extra_info += " ";
-		node_state_msg.extra_info += to_string(controller_state.direction);
-
-		state_pub.publish(node_state_msg);
-
-		get_res(buffer, 16);
-		for(int i = 0;i<16;i++){
-			printf("%d ", buffer[i]);
-		}
-		printf("\n");
-		
-	   	my_serial.write(buffer, 16);
-		//cout<<"Speed: " << speed << " Direction: " << direction << endl;
-		usleep(40000);
 		ros::spinOnce();
+		rate.sleep();
 	}
 	return 0;
 }
