@@ -20,23 +20,13 @@
 
 using namespace std;
 
-int get_state(uint8_t* buffer, int buffer_size);
-int set_state(uint8_t* buffer, int buffer_size);
-
-int shutdown_cmd = 1;
-int speed = 0; //0.01m/s 
-int direction = 0; //0.001rad 
-int turn_flag = 0; // 0 straight  -1 left  1 right
-
-CarState state;
-
 
 struct ControllerState{
 	int speed;
 	int direction;
 };
 
-typedef struct {
+struct CarState{
 	float speed; //速度，单位是m/s
 	float angle; //角度，左负右正，单位是°
 	uint8_t gas;
@@ -84,8 +74,17 @@ typedef struct {
 			}
 		}
 	}
-}CarState;
+};
 
+int get_state(uint8_t* buffer, int buffer_size, CarState& state);
+int set_state(uint8_t* buffer, int buffer_size);
+
+int shutdown_cmd = 1;
+int speed = 0; //0.01m/s 
+int direction = 0; //0.001rad 
+int turn_flag = 0; // 0 straight  -1 left  1 right
+
+CarState car_state;
 ControllerState controller_state;
 
 //int 转 4字节 BYTE[],
@@ -131,7 +130,7 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 	}else if(left == 350 && right == 350){
 		if(turn_flag != 0){
 			//wait wheel to zero
-			if(fabs(state.angle + 571) <= 20){
+			if(fabs(car_state.angle + 571) <= 20){
 				//继续运动
 				turn_flag = 0;		
 			}
@@ -162,7 +161,7 @@ serial::Serial * p_my_serial;
 void parking(){
 	char temp_buffer[16];
 	temp_buffer[0] = 0xAA;
-	
+	temp_buffer[1] = id;
 	temp_buffer[2] = 0x01;
 	temp_buffer[3] = 0;
 	temp_buffer[4] = 0;
@@ -225,7 +224,7 @@ int main(int argc, char ** argv){
 
 			state_pub.publish(node_state_msg);
 			set_state(buffer, 16);
-			get_state(recv_buffer, 24, state);
+			get_state(recv_buffer, 24, car_state);
 		}
 		ros::spinOnce();
 		rate.sleep();
@@ -233,8 +232,14 @@ int main(int argc, char ** argv){
 	return 0;
 }
 
+bool recv_flag = false;
+uint8_t data_buffer[24] = {0};
+uint8_t mode = 0;
+int recv_bytes_count = 0;
+
 int get_state(uint8_t* buffer, int buffer_size, CarState& state) {
 	int data_size = 0;
+	
 	size_t recv_size = p_my_serial->read(buffer, buffer_size);
 	for (int i = 0; i < recv_size; i++) {
 		//读到了开始标记
@@ -253,9 +258,12 @@ int get_state(uint8_t* buffer, int buffer_size, CarState& state) {
 			if (true) {
 				state.trans_state_data(data_buffer);
 				//输出state
-				//state.print_ori_state(data_buffer);
-				//state.print_car_state();
+				system("clear");
+				state.print_ori_state(data_buffer);
+				state.print_car_state();
 			}
+			recv_flag = false;
+			memset(data_buffer, 0, 24);
 		}
 
 	}
