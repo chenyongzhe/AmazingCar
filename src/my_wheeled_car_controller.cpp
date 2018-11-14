@@ -20,12 +20,70 @@
 
 using namespace std;
 
+int get_state(uint8_t* buffer, int buffer_size);
+int set_state(uint8_t* buffer, int buffer_size);
+
 int shutdown_cmd = 1;
+int speed = 0; //0.01m/s 
+int direction = 0; //0.001rad 
+int turn_flag = 0; // 0 straight  -1 left  1 right
+
+
 
 struct ControllerState{
 	int speed;
 	int direction;
 };
+
+typedef struct {
+	float speed; //速度，单位是m/s
+	float angle; //角度，左负右正，单位是°
+	uint8_t gas;
+	uint8_t direction;
+	uint8_t turn;
+	int drive_mode; //运行模式，0是限速安全模式，1是中速 2是高速 3是不限速
+	float battery_percent; //电量百分比
+	void print_car_state() {
+		if (drive_mode == 1){
+			printf("Gas:%d Turn:%d Mode:Mid-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+		} else if (drive_mode == 2) {
+			printf("Gas:%d Turn:%d Mode:High-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+		} else if (drive_mode == 3) {
+			printf("Gas:%d Turn:%d Mode:Unlimited-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+		} else {
+			printf("Gas:%d Turn:%d Mode:Low-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+		}
+	}
+	void trans_state_data(uint8_t* ori_data) {
+		if (ori_data[4] >= 0xF0) {
+			//速度负值
+			speed = ~ori_data[4] << 8 + ~ori_data[5] + 1;
+		} else {
+			//速度正值
+			speed = ori_data[4] << 8 + ori_data[5];
+		}
+		if (ori_data[4] >= 0xF0) {
+			//角度负值
+			angle = ~ori_data[8] << 8 + ~ori_data[9] + 1;
+		} else {
+			//角度正值
+			angle = ori_data[8] << 8 + ori_data[9];
+		}
+		drive_mode = ori_data[3];
+		gas = ori_data[6];
+		turn = ori_data[7];
+		direction = ori_data[10];
+		battery_percent = ori_data[11];
+	}
+	void print_ori_state(uint8_t* ori_data) {
+		for (int i = 0; i < 24; i++) {
+			printf("%d ", ori_data[i]);
+			if (ori_data[i] == 0x55) {
+				printf("\r");
+			}
+		}
+	}
+}CarState;
 
 ControllerState controller_state;
 
@@ -53,30 +111,35 @@ void callback_server(const amazing_car::my_server_cmd cmd){
     shutdown_cmd = cmd.controller_cmd;
 }
 
-int speed = 0; //0.01m/s 
-int direction = 0; //0.001rad 
-
-
 void callback(const geometry_msgs::Twist& cmd_vel){
 	float left = cmd_vel.linear.x;
 	float right = cmd_vel.linear.y;
 	float beta = cmd_vel.linear.z;
 	
-
 	if(left == 50 && right == 350){
 		speed = 300;
 		direction = 314;
+		//left
+		turn_flag = -1;
+
 	}else if(left == 350 && right == 50){
 		speed = 300;
 		direction = -314;
+		//right
+		turn_flag = 1;
 	}else if(left == 350 && right == 350){
-		speed = 300;
-		while(beta > 180){
-			beta -= 360;
+		if(turn_flag != 0){
+			//wait wheel to zero
+			speed = 0;
+			direction = 0;
+		}else{
+			speed = 300;
+			while(beta > 180){
+				beta -= 360;
+			}
+			beta = beta * -1 * 3.1415926 * 1000 / 180;
+			direction = beta;
 		}
-		beta = beta * -1 * 3.1415926 * 1000 / 180;
-		
-		direction = beta;
 	}else{  
 		speed = 0;
 		direction = 0;
@@ -88,39 +151,6 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 
 int id = 0;
 BYTE * temp = new BYTE[4];
-
-void get_res(uint8_t* buffer, int buffer_size){
-	int data_size = 0;
-	if(buffer_size < 16){
-		cout<<"The buffer doesn't have enough space\n"<<endl;
-	}
-	if(id >= 255){
-		id = 0;
-	}
-	buffer[0] = 0xAA;
-	buffer[1] = id;
-	buffer[2] = 0x01;
-	buffer[3] = 0;
-	intToByte(speed, temp);
-	buffer[4] = temp[2];
-	buffer[5] = temp[3];
-	buffer[6] = 0;
-	buffer[7] = 0;
-	intToByte(direction, temp);
-	buffer[8] = temp[2];
-	buffer[9] = temp[3];
-	buffer[10] = 0;
-	buffer[11] = 0;
-	buffer[12] = 0;
-	buffer[13] = 0;
-	buffer[14] = 0;
-	for(int i = 0;i<14;i++){
-		buffer[14] += buffer[i];
-	}
-	buffer[15] = 0x55;
-	id++;
-	return;
-}
 
 serial::Serial * p_my_serial;
 
@@ -188,12 +218,108 @@ int main(int argc, char ** argv){
 			node_state_msg.extra_info += to_string(controller_state.direction);
 
 			state_pub.publish(node_state_msg);
-			get_res(buffer, 16);
-			my_serial.write(buffer, 16);
-			//cout<<"Speed: " << speed << " Direction: " << direction << endl;
+			set_state(buffer, 16);
+			get_state(buffer, 16);
 		}
 		ros::spinOnce();
 		rate.sleep();
 	}
 	return 0;
 }
+
+int get_state(uint8_t* buffer, int buffer_size) {
+	int data_size = 0;
+	size_t recv_size = p_my_serial->read(buffer, buffer_size);
+	for (int i = 0; i < recv_size; i++) {
+		//读到了开始标记
+		if (buffer[i] == 0xAA) {
+			//开始读接下来23个字节
+			data_buffer[0] = 0xAA;
+			recv_flag = true;
+			recv_bytes_count = 1;
+		} else if (recv_flag) {
+			data_buffer[recv_bytes_count++] = buffer[i];
+		}
+		//读满了24个字节
+		if (recv_bytes_count == 24) {
+			//检查开始标记，结束标记，校验和，之后进行处理
+			//data_buffer[0] == 0xAA && data_buffer[23] == 0x55 && sum(data_buffer, 0, 21) == data_buffer[22]
+			if (true) {
+				state.trans_state_data(data_buffer);
+				//输出state
+				//state.print_ori_state(data_buffer);
+				state.print_car_state();
+			}
+		}
+
+	}
+	return data_size;
+}
+
+int set_state(uint8_t* buffer, int buffer_size) {
+	int date_size = 0;
+	if (buffer_size < 16) {
+		cout << "The send buffer doesn't have enough space\n" << endl;
+	}
+	if (id >= 0xEF) {
+		id = 0;
+	}
+	buffer[0] = 0xAA;
+	buffer[1] = id;
+	buffer[2] = 0x01;
+	buffer[3] = 0;
+	intToByte(speed, temp);
+	buffer[4] = temp[2];
+	buffer[5] = temp[3];
+	buffer[6] = 0;
+	buffer[7] = 0;
+	intToByte(direction, temp);
+	buffer[8] = temp[2];
+	buffer[9] = temp[3];
+	buffer[10] = mode;
+	buffer[11] = 0;
+	buffer[12] = 0;
+	buffer[13] = 0;
+	buffer[14] = 0;
+	for (int i = 0; i<14; i++) {
+		buffer[14] += buffer[i];
+	}
+	buffer[15] = 0x55;
+	id++;
+	p_my_serial->write(buffer, 16);
+	return date_size;
+}
+
+
+// void get_res(uint8_t* buffer, int buffer_size){
+// 	int data_size = 0;
+// 	if(buffer_size < 16){
+// 		cout<<"The buffer doesn't have enough space\n"<<endl;
+// 	}
+// 	if(id >= 255){
+// 		id = 0;
+// 	}
+// 	buffer[0] = 0xAA;
+// 	buffer[1] = id;
+// 	buffer[2] = 0x01;
+// 	buffer[3] = 0;
+// 	intToByte(speed, temp);
+// 	buffer[4] = temp[2];
+// 	buffer[5] = temp[3];
+// 	buffer[6] = 0;
+// 	buffer[7] = 0;
+// 	intToByte(direction, temp);
+// 	buffer[8] = temp[2];
+// 	buffer[9] = temp[3];
+// 	buffer[10] = 0;
+// 	buffer[11] = 0;
+// 	buffer[12] = 0;
+// 	buffer[13] = 0;
+// 	buffer[14] = 0;
+// 	for(int i = 0;i<14;i++){
+// 		buffer[14] += buffer[i];
+// 	}
+// 	buffer[15] = 0x55;
+// 	id++;
+// 	return;
+// }
