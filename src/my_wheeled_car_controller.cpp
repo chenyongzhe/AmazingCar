@@ -28,6 +28,7 @@ int speed = 0; //0.01m/s
 int direction = 0; //0.001rad 
 int turn_flag = 0; // 0 straight  -1 left  1 right
 
+CarState state;
 
 
 struct ControllerState{
@@ -130,6 +131,10 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 	}else if(left == 350 && right == 350){
 		if(turn_flag != 0){
 			//wait wheel to zero
+			if(fabs(state.angle + 571) <= 20){
+				//继续运动
+				turn_flag = 0;		
+			}
 			speed = 0;
 			direction = 0;
 		}else{
@@ -197,6 +202,7 @@ int main(int argc, char ** argv){
     serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
 	p_my_serial = &my_serial;
 	uint8_t* buffer = new uint8_t[16];
+	uint8_t* recv_buffer = new uint8_t[24];
 	ros::init(argc, argv, "my_wheeled_car_controller");
 	ros::NodeHandle n;
 	ros::Subscriber sub = n.subscribe("cmd_vel", 1000, callback);
@@ -219,7 +225,7 @@ int main(int argc, char ** argv){
 
 			state_pub.publish(node_state_msg);
 			set_state(buffer, 16);
-			get_state(buffer, 16);
+			get_state(recv_buffer, 24, state);
 		}
 		ros::spinOnce();
 		rate.sleep();
@@ -227,7 +233,7 @@ int main(int argc, char ** argv){
 	return 0;
 }
 
-int get_state(uint8_t* buffer, int buffer_size) {
+int get_state(uint8_t* buffer, int buffer_size, CarState& state) {
 	int data_size = 0;
 	size_t recv_size = p_my_serial->read(buffer, buffer_size);
 	for (int i = 0; i < recv_size; i++) {
@@ -248,7 +254,7 @@ int get_state(uint8_t* buffer, int buffer_size) {
 				state.trans_state_data(data_buffer);
 				//输出state
 				//state.print_ori_state(data_buffer);
-				state.print_car_state();
+				//state.print_car_state();
 			}
 		}
 
@@ -289,37 +295,3 @@ int set_state(uint8_t* buffer, int buffer_size) {
 	p_my_serial->write(buffer, 16);
 	return date_size;
 }
-
-
-// void get_res(uint8_t* buffer, int buffer_size){
-// 	int data_size = 0;
-// 	if(buffer_size < 16){
-// 		cout<<"The buffer doesn't have enough space\n"<<endl;
-// 	}
-// 	if(id >= 255){
-// 		id = 0;
-// 	}
-// 	buffer[0] = 0xAA;
-// 	buffer[1] = id;
-// 	buffer[2] = 0x01;
-// 	buffer[3] = 0;
-// 	intToByte(speed, temp);
-// 	buffer[4] = temp[2];
-// 	buffer[5] = temp[3];
-// 	buffer[6] = 0;
-// 	buffer[7] = 0;
-// 	intToByte(direction, temp);
-// 	buffer[8] = temp[2];
-// 	buffer[9] = temp[3];
-// 	buffer[10] = 0;
-// 	buffer[11] = 0;
-// 	buffer[12] = 0;
-// 	buffer[13] = 0;
-// 	buffer[14] = 0;
-// 	for(int i = 0;i<14;i++){
-// 		buffer[14] += buffer[i];
-// 	}
-// 	buffer[15] = 0x55;
-// 	id++;
-// 	return;
-// }
