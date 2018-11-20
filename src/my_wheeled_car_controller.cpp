@@ -21,6 +21,9 @@
 using namespace std;
 
 
+float car_state_speed = 0;
+float car_state_angle = 0;
+
 struct ControllerState{
 	int speed;
 	int direction;
@@ -36,29 +39,36 @@ struct CarState{
 	float battery_percent; //电量百分比
 	void print_car_state() {
 		if (drive_mode == 1){
-			printf("Gas:%d Turn:%d Mode:Mid-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+			printf("Gas:%d Turn:%d Mode:Mid-Speed Diretion:%d Speed:%f Angle:%f\n", gas, turn, direction, car_state_speed, car_state_angle);
 		} else if (drive_mode == 2) {
-			printf("Gas:%d Turn:%d Mode:High-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+			printf("Gas:%d Turn:%d Mode:High-Speed Diretion:%d Speed:%f Angle:%f\n", gas, turn, direction, car_state_speed, car_state_angle);
 		} else if (drive_mode == 3) {
-			printf("Gas:%d Turn:%d Mode:Unlimited-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+			printf("Gas:%d Turn:%d Mode:Unlimited-Speed Diretion:%d Speed:%f Angle:%f\n", gas, turn, direction, car_state_speed, car_state_angle);
 		} else {
-			printf("Gas:%d Turn:%d Mode:Low-Speed Diretion:%d\r", gas, turn, battery_percent, direction);
+			printf("Gas:%d Turn:%d Mode:Low-Speed Diretion:%d Speed:%f Angle:%f\n", gas, turn, direction, car_state_speed, car_state_angle);
 		}
 	}
 	void trans_state_data(uint8_t* ori_data) {
 		if (ori_data[4] >= 0xF0) {
 			//速度负值
-			speed = ~ori_data[4] << 8 + ~ori_data[5] + 1;
+			//printf("fu ori4: %d ori5:%d\n", ori_data[4], ori_data[5]);
+			car_state_speed = (255 - ori_data[4]) * 256 + (255-ori_data[5]) + 1;
+			car_state_speed = -1 * car_state_speed;
 		} else {
 			//速度正值
-			speed = ori_data[4] << 8 + ori_data[5];
+			//printf("zh ori4: %d ori5:%d\n", ori_data[4], ori_data[5]);
+			car_state_speed = ori_data[4] * 256 + ori_data[5];
 		}
-		if (ori_data[4] >= 0xF0) {
+		if (ori_data[8] >= 0xF0) {
 			//角度负值
-			angle = ~ori_data[8] << 8 + ~ori_data[9] + 1;
+			//printf("fu ori8: %d ori9:%d\n", ori_data[8], ori_data[9]);
+			car_state_angle = (255 - ori_data[8]) * 256 + (255 - ori_data[9]) + 1;
+			car_state_angle = -1 * car_state_angle;
 		} else {
 			//角度正值
-			angle = ori_data[8] << 8 + ori_data[9];
+			//printf("zh ori8: %d ori9:%d\n", ori_data[8], ori_data[9]);
+			//car_state_angle = ori_data[8] << 8 + ori_data[9];
+			car_state_angle = ori_data[8] * 256 + ori_data[9];			
 		}
 		drive_mode = ori_data[3];
 		gas = ori_data[6];
@@ -70,7 +80,7 @@ struct CarState{
 		for (int i = 0; i < 24; i++) {
 			printf("%d ", ori_data[i]);
 			if (ori_data[i] == 0x55) {
-				printf("\r");
+				printf("\n");
 			}
 		}
 	}
@@ -115,7 +125,9 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 	float left = cmd_vel.linear.x;
 	float right = cmd_vel.linear.y;
 	float beta = cmd_vel.linear.z;
-	
+	//printf("left:%f right%f\n", left, right);
+
+	//printf("car_state_angle:%f turnflag:%d\n", car_state.angle, turn_flag);
 	if(left == 50 && right == 350){
 		speed = 300;
 		direction = 314;
@@ -128,9 +140,11 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 		//right
 		turn_flag = 1;
 	}else if(left == 350 && right == 350){
+		
 		if(turn_flag != 0){
+			
 			//wait wheel to zero
-			if(fabs(car_state.angle + 571) <= 20){
+			if(fabs(car_state_angle) <= 20){
 				//继续运动
 				turn_flag = 0;		
 			}
@@ -197,7 +211,7 @@ int main(int argc, char ** argv){
     controller_cfg >> serial_num;
     char serial_num_str[20];
     memset(serial_num_str, 0, 20);
-    sprintf(serial_num_str, "/dev/ttyUSB%d", serial_num);
+    sprintf(serial_num_str, "/dev/ttyS%d", serial_num);
     serial::Serial my_serial(serial_num_str, 115200, serial::Timeout::simpleTimeout(1000));
 	p_my_serial = &my_serial;
 	uint8_t* buffer = new uint8_t[16];
@@ -256,9 +270,10 @@ int get_state(uint8_t* buffer, int buffer_size, CarState& state) {
 			//检查开始标记，结束标记，校验和，之后进行处理
 			//data_buffer[0] == 0xAA && data_buffer[23] == 0x55 && sum(data_buffer, 0, 21) == data_buffer[22]
 			if (true) {
+				system("clear");
 				state.trans_state_data(data_buffer);
 				//输出state
-				system("clear");
+				//
 				state.print_ori_state(data_buffer);
 				state.print_car_state();
 			}
