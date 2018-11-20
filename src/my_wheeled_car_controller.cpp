@@ -130,13 +130,22 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 	//printf("car_state_angle:%f turnflag:%d\n", car_state.angle, turn_flag);
 	if(left == 50 && right == 350){
 		speed = 300;
-		direction = 314;
+		if(fabs(beta) <= 10){
+			direction = 157;
+		}else{
+			direction = 314;
+		}
+		
 		//left
 		turn_flag = -1;
 
 	}else if(left == 350 && right == 50){
 		speed = 300;
-		direction = -314;
+		if(fabs(beta) <= 10){
+			direction = -157;
+		}else{
+			direction = -314;
+		}
 		//right
 		turn_flag = 1;
 	}else if(left == 350 && right == 350){
