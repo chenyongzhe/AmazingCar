@@ -20,7 +20,6 @@
 
 using namespace std;
 
-
 float car_state_speed = 0;
 float car_state_angle = 0;
 
@@ -115,7 +114,6 @@ int bytesToInt(BYTE bytes[]) {
 	return addr;
 }
 
-
 void callback_server(const amazing_car::my_server_cmd cmd){
     //if( == 0){
     shutdown_cmd = cmd.controller_cmd;
@@ -138,7 +136,6 @@ void callback(const geometry_msgs::Twist& cmd_vel){
 		
 		//left
 		turn_flag = -1;
-
 	}else if(left == 350 && right == 50){
 		speed = 300;
 		if(fabs(beta) <= 10){
@@ -240,11 +237,9 @@ int main(int argc, char ** argv){
 			node_state_msg.node_name = "my_wheeled_car_controller";
 			node_state_msg.node_state = 1;
 			node_state_msg.extra_info = "";
-			
 			node_state_msg.extra_info += to_string(controller_state.speed);
 			node_state_msg.extra_info += " ";
 			node_state_msg.extra_info += to_string(controller_state.direction);
-
 			state_pub.publish(node_state_msg);
 			set_state(buffer, 16);
 			get_state(recv_buffer, 24, car_state);
@@ -262,7 +257,6 @@ int recv_bytes_count = 0;
 
 int get_state(uint8_t* buffer, int buffer_size, CarState& state) {
 	int data_size = 0;
-	
 	size_t recv_size = p_my_serial->read(buffer, buffer_size);
 	for (int i = 0; i < recv_size; i++) {
 		//读到了开始标记
